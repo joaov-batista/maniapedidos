@@ -44,7 +44,7 @@ function initAdminPage() {
         const addGroupBtn = document.getElementById('add-group-btn');
         const saveMenuBtn = document.getElementById('save-menu-btn');
 
-        const createGroupUI = (group = { name: '', dishes: '', sides: '' }) => {
+        function createGroupUI(group = { name: '', dishes: '', sides: '' }) {
             const card = document.createElement('div');
             card.className = 'menu-group-admin-card';
             card.innerHTML = `
@@ -56,7 +56,7 @@ function initAdminPage() {
                 </div>
             `;
             menuGroupsContainer.appendChild(card);
-        };
+        }
 
         menuGroupsContainer.addEventListener('click', e => {
             if (e.target.closest('.delete-group-btn')) {
@@ -66,7 +66,7 @@ function initAdminPage() {
             }
         });
 
-        const loadMenuFromFirebase = async () => {
+        async function loadMenuFromFirebase() {
             const docRef = db.collection('configuracao').doc('cardapio-do-dia');
             const docSnap = await docRef.get();
             if (docSnap.exists) {
@@ -79,9 +79,9 @@ function initAdminPage() {
             } else {
                 createGroupUI();
             }
-        };
+        }
 
-        const saveMenuToFirebase = () => {
+        function saveMenuToFirebase() {
             const groups = [];
             document.querySelectorAll('.menu-group-admin-card').forEach(card => {
                 const name = card.querySelector('.group-name').value.trim();
@@ -100,7 +100,7 @@ function initAdminPage() {
                     .then(() => alert('Nenhum grupo válido. Cardápio em branco salvo.'))
                     .catch(err => alert('Erro: ' + err.message));
             }
-        };
+        }
 
         addGroupBtn.addEventListener('click', () => createGroupUI());
         saveMenuBtn.addEventListener('click', saveMenuToFirebase);
@@ -134,6 +134,9 @@ function initAppPage() {
     const searchInput = document.getElementById('searchInput');
     const mobileFab = document.getElementById('mobile-fab');
     const mobileBackBtn = document.getElementById('mobile-back-btn');
+    const viewOrderModal = document.getElementById('view-order-modal');
+    const closeModalBtn = document.getElementById('close-modal-btn');
+    const modalOrderDetails = document.getElementById('modal-order-details');
 
     // ESTADO
     let menuData = [];
@@ -155,41 +158,6 @@ function initAppPage() {
             appContainer.classList.add('hidden');
             if (unsubscribeOrders) unsubscribeOrders();
         }
-    });
-    
-    // Listeners de autenticação que devem estar sempre ativos
-    authToggleLink.addEventListener('click', e => {
-        e.preventDefault();
-        loginForm.classList.toggle('hidden');
-        registerForm.classList.toggle('hidden');
-        const isLogin = !loginForm.classList.contains('hidden');
-        const authTitle = document.getElementById('auth-title');
-        const authSubtitle = document.getElementById('auth-subtitle');
-        authTitle.innerText = isLogin ? 'Pedidos Mania Mix' : 'Crie sua Conta';
-        authSubtitle.innerText = isLogin ? 'Acesse sua conta para iniciar' : 'É rápido e fácil.';
-        authToggleLink.innerText = isLogin ? 'Não tem uma conta? Cadastre-se' : 'Já tem uma conta? Faça Login';
-    });
-
-    loginForm.addEventListener('submit', e => {
-        e.preventDefault();
-        const email = loginForm['login-email'].value;
-        const password = loginForm['login-password'].value;
-        auth.signInWithEmailAndPassword(email, password).catch(err => alert(err.message));
-    });
-
-    registerForm.addEventListener('submit', e => {
-        e.preventDefault();
-        const email = registerForm['register-email'].value;
-        const password = registerForm['register-password'].value;
-        auth.createUserWithEmailAndPassword(email, password).catch(err => {
-            if (err.code == 'auth/weak-password') {
-                alert('Senha muito fraca. A senha deve ter no mínimo 6 caracteres.');
-            } else if (err.code == 'auth/email-already-in-use') {
-                alert('Este e-mail já está cadastrado.');
-            } else {
-                alert('Erro ao cadastrar: ' + err.message);
-            }
-        });
     });
 
     // FUNÇÕES DE LÓGICA
@@ -343,8 +311,8 @@ function initAppPage() {
                     <h4>${order.cliente}</h4>
                     <p>Pedido #${displayId} - ${order.items.length} item(s)</p>
                     <div class="order-card-actions">
+                        <button class="btn-secondary btn-small" data-action="view" title="Visualizar Pedido"><i class="fas fa-eye"></i></button>
                         <button class="btn-secondary btn-small" data-action="edit" title="Editar Pedido"><i class="fas fa-edit"></i></button>
-                        <button class="btn-secondary btn-small" data-action="reprint" title="Reimprimir Pedido"><i class="fas fa-print"></i></button>
                         <button class="btn-danger btn-small" data-action="delete" title="Apagar Pedido"><i class="fas fa-trash"></i></button>
                         ${order.status === 'em preparo' ? 
                             `<button class="btn-success btn-small" data-action="complete" title="Marcar como Pronto"><i class="fas fa-check"></i></button>` : 
@@ -413,8 +381,40 @@ function initAppPage() {
             }
         });
     }
+
+    function showOrderModal(order) {
+        if (!order) return;
+        
+        let itemsHTML = order.items.map(item => `
+            <div class="modal-item">
+                <strong>- ${item.dish}</strong>
+                ${item.sides.length > 0 ? `<ul>${item.sides.map(s => `<li>${s}</li>`).join('')}</ul>` : ''}
+            </div>
+        `).join('');
+
+        modalOrderDetails.innerHTML = `
+            <p><strong>Cliente:</strong> ${order.cliente}</p>
+            <p><strong>Tipo:</strong> ${order.tipo}</p>
+            <p><strong>Status:</strong> ${order.status}</p>
+            ${order.extras ? `<p><strong>Extras:</strong> ${order.extras}</p>` : ''}
+            <div class="modal-items-list">${itemsHTML}</div>
+        `;
+        viewOrderModal.classList.remove('hidden');
+    }
     
     function setupAppEventListeners() {
+        authToggleLink.addEventListener('click', e => {
+            e.preventDefault();
+            loginForm.classList.toggle('hidden');
+            registerForm.classList.toggle('hidden');
+            const authTitle = document.getElementById('auth-title');
+            const authSubtitle = document.getElementById('auth-subtitle');
+            const isLogin = !loginForm.classList.contains('hidden');
+            authTitle.innerText = isLogin ? 'Pedidos Mania Mix' : 'Crie sua Conta';
+            authSubtitle.innerText = isLogin ? 'Acesse sua conta para iniciar' : 'É rápido e fácil.';
+            authToggleLink.innerText = isLogin ? 'Não tem uma conta? Cadastre-se' : 'Já tem uma conta? Faça Login';
+        });
+
         logoutBtn.addEventListener('click', () => auth.signOut());
         savePrintBtn.addEventListener('click', saveAndPrintOrder);
         newOrderBtn.addEventListener('click', resetEntireOrder);
@@ -431,27 +431,28 @@ function initAppPage() {
         });
 
         ordersList.addEventListener('click', e => {
-            const target = e.target.closest('button');
-            if(!target) return;
-            const action = target.dataset.action;
-            const card = target.closest('.order-item-card');
+            const button = e.target.closest('button');
+            const card = e.target.closest('.order-item-card');
             if (!card) return;
             const orderId = card.dataset.id;
-            if (!orderId) return;
             const orderData = displayedOrders.find(o => o.id === orderId);
+            if (!orderData) return;
 
-            if (action === 'complete') { db.collection('pedidos').doc(orderId).update({ status: 'pronto' }); } 
-            else if (action === 'reopen') { db.collection('pedidos').doc(orderId).update({ status: 'em preparo' }); } 
-            else if (action === 'reprint') { if(orderData) printReceipt(orderData); } 
-            else if (action === 'delete') {
-                if (confirm(`ATENÇÃO:\nVai APAGAR PERMANENTEMENTE o pedido de ${orderData?.cliente}.\n\nDeseja continuar?`)) {
-                    db.collection('pedidos').doc(orderId).delete();
+            if (button) {
+                const action = button.dataset.action;
+                if (action === 'complete') { db.collection('pedidos').doc(orderId).update({ status: 'pronto' }); }
+                else if (action === 'reopen') { db.collection('pedidos').doc(orderId).update({ status: 'em preparo' }); }
+                else if (action === 'reprint') { printReceipt(orderData); }
+                else if (action === 'delete') {
+                    if (confirm(`ATENÇÃO:\nVai APAGAR o pedido de ${orderData?.cliente}.\n\nDeseja continuar?`)) {
+                        db.collection('pedidos').doc(orderId).delete();
+                    }
+                } else if (action === 'edit') {
+                    editOrder(orderId);
+                    if (window.innerWidth <= 1024) { appContainer.classList.add('view-main'); }
                 }
-            } else if (action === 'edit') {
-                editOrder(orderId);
-                if(window.innerWidth <= 1024) {
-                    appContainer.classList.add('view-main');
-                }
+            } else {
+                showOrderModal(orderData);
             }
         });
         
@@ -512,6 +513,15 @@ function initAppPage() {
 
         mobileBackBtn.addEventListener('click', () => {
             appContainer.classList.remove('view-main');
+        });
+
+        closeModalBtn.addEventListener('click', () => {
+            viewOrderModal.classList.add('hidden');
+        });
+        viewOrderModal.addEventListener('click', e => {
+            if (e.target === viewOrderModal) {
+                viewOrderModal.classList.add('hidden');
+            }
         });
     }
 }
