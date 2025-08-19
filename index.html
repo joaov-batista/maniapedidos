@@ -91,6 +91,16 @@
         <button id="mobile-fab" class="mobile-only"><i class="fas fa-plus"></i> Novo Pedido</button>
     </div>
 
+    <div id="view-order-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Detalhes do Pedido</h2>
+                <button id="close-modal-btn" class="btn-danger btn-small"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="modal-order-details" class="modal-body"></div>
+        </div>
+    </div>
+
     <div id="recibo-container"></div>
     
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
