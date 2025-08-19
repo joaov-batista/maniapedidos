@@ -15,7 +15,6 @@ const firebaseConfig = {
 const app = firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();
-const serverTimestamp = firebase.firestore.FieldValue.serverTimestamp;
 
 document.addEventListener('DOMContentLoaded', () => {
     const path = window.location.pathname;
@@ -148,7 +147,7 @@ function initAppPage() {
             loginContainer.classList.add('hidden');
             appContainer.classList.remove('hidden');
             await loadMenu();
-            setupEventListeners();
+            setupEventListeners(); // Ativa todos os listeners da página principal
             listenToOrders();
         } else {
             loginContainer.classList.remove('hidden');
@@ -156,6 +155,20 @@ function initAppPage() {
             if (unsubscribeOrders) unsubscribeOrders();
         }
     });
+    
+    // SETUP DE EVENT LISTENERS GLOBAIS (LOGIN/CADASTRO)
+    authToggleLink.addEventListener('click', e => {
+        e.preventDefault();
+        loginForm.classList.toggle('hidden');
+        registerForm.classList.toggle('hidden');
+        const isLogin = !loginForm.classList.contains('hidden');
+        authTitle.innerText = isLogin ? 'Pedidos Mania Mix' : 'Crie sua Conta';
+        authSubtitle.innerText = isLogin ? 'Acesse sua conta para iniciar' : 'É rápido e fácil.';
+        authToggleLink.innerText = isLogin ? 'Não tem uma conta? Cadastre-se' : 'Já tem uma conta? Faça Login';
+    });
+
+    loginForm.addEventListener('submit', e => { e.preventDefault(); auth.signInWithEmailAndPassword(loginForm['login-email'].value, loginForm['login-password'].value).catch(err => alert(err.message)); });
+    registerForm.addEventListener('submit', e => { e.preventDefault(); auth.createUserWithEmailAndPassword(registerForm['register-email'].value, registerForm['register-password'].value).catch(err => alert(err.message)); });
 
     // FUNÇÕES DE LÓGICA
     const resetEntireOrder = () => {
@@ -223,7 +236,7 @@ function initAppPage() {
         });
     };
 
-    const saveAndPrintOrder = async () => {
+    const saveAndPrintOrder = () => {
         const cliente = clienteNameInput.value.trim();
         if (currentOrderItems.length === 0) return alert('O pedido está vazio!');
         if (!cliente) return alert('Digite o nome do cliente!');
@@ -242,8 +255,10 @@ function initAppPage() {
             ? db.collection('pedidos').doc(orderId).update(orderData)
             : db.collection('pedidos').add(orderData);
 
-        operation.then(() => {
-            printReceipt(orderData);
+        operation.then((docRef) => {
+            // Para garantir que temos todos os dados para impressão, mesmo em um novo pedido
+            const finalOrderData = { id: orderId || docRef.id, ...orderData };
+            printReceipt(finalOrderData);
             resetEntireOrder();
         }).catch(err => alert('Erro: ' + err.message));
     };
@@ -337,29 +352,25 @@ function initAppPage() {
         newOrderBtn.classList.remove('hidden');
     };
 
-    const deleteAllOrders = async () => {
+    const deleteAllOrders = () => {
         if (!confirm('ATENÇÃO MÁXIMA:\nEsta ação vai APAGAR PERMANENTEMENTE TODOS OS PEDIDOS (prontos e em preparo) do banco de dados.\n\nEsta ação é irreversível e visa economizar espaço no Firebase. Deseja continuar?')) return;
 
-        const collectionRef = db.collection('pedidos');
-        try {
-            const snapshot = await collectionRef.get();
+        db.collection('pedidos').get().then(snapshot => {
             if (snapshot.empty) {
                 alert("Não há nenhum pedido no banco de dados para excluir.");
                 return;
             }
-
             const batch = db.batch();
             snapshot.docs.forEach(doc => {
                 batch.delete(doc.ref);
             });
-
-            await batch.commit();
-            alert(`Todos os ${snapshot.size} pedidos foram excluídos com sucesso do Firebase.`);
-
-        } catch (err) {
+            return batch.commit();
+        }).then((numDeleted) => {
+            alert(`Todos os pedidos foram excluídos com sucesso do Firebase.`);
+        }).catch(err => {
             console.error("Erro ao excluir todos os pedidos:", err);
             alert("ERRO: Não foi possível excluir os pedidos. Verifique o console para mais detalhes.");
-        }
+        });
     };
     
     function listenToOrders() {
@@ -387,7 +398,6 @@ function initAppPage() {
         orderFilters.addEventListener('click', e => {
             const target = e.target.closest('.filter-btn');
             if(!target) return;
-
             orderFilters.querySelector('.active').classList.remove('active');
             target.classList.add('active');
             currentFilter = target.dataset.status;
@@ -420,7 +430,7 @@ function initAppPage() {
             }
         });
         
-        menuContent.addEventListener('change', (e) => {
+        menuContent.addEventListener('change', e => {
             if (e.target.name === 'main-dish') {
                 document.querySelectorAll('.sides-container').forEach(c => {
                     c.innerHTML = '';
@@ -480,19 +490,6 @@ function initAppPage() {
         });
 
         searchInput.addEventListener('input', renderOrders);
-        authToggleLink.addEventListener('click', e => {
-            e.preventDefault();
-            loginForm.classList.toggle('hidden');
-            registerForm.classList.toggle('hidden');
-            const isLogin = !loginForm.classList.contains('hidden');
-            authTitle.innerText = isLogin ? 'Pedidos Mania Mix' : 'Crie sua Conta';
-            authSubtitle.innerText = isLogin ? 'Acesse sua conta para iniciar' : 'É rápido e fácil.';
-            authToggleLink.innerText = isLogin ? 'Não tem uma conta? Cadastre-se' : 'Já tem uma conta? Faça Login';
-        });
-
-        loginForm.addEventListener('submit', e => { e.preventDefault(); auth.signInWithEmailAndPassword(loginForm['login-email'].value, loginForm['password'].value).catch(err => alert(err.message)); });
-        registerForm.addEventListener('submit', e => { e.preventDefault(); auth.createUserWithEmailAndPassword(registerForm['register-email'].value, registerForm['password'].value).catch(err => alert(err.message)); });
-
         logoutBtn.addEventListener('click', () => auth.signOut());
         savePrintBtn.addEventListener('click', saveAndPrintOrder);
         newOrderBtn.addEventListener('click', resetEntireOrder);
