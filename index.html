@@ -17,12 +17,12 @@
             <form id="login-form">
                 <input type="email" id="login-email" placeholder="E-mail" required>
                 <input type="password" id="login-password" placeholder="Senha" required>
-                <button type="submit" id="login-btn">Entrar</button>
+                <button type="submit">Entrar</button>
             </form>
             <form id="register-form" class="hidden">
                 <input type="email" id="register-email" placeholder="Seu melhor e-mail" required>
                 <input type="password" id="register-password" placeholder="Crie uma senha forte" required>
-                <button type="submit" id="register-btn">Criar Conta e Entrar</button>
+                <button type="submit">Criar Conta e Entrar</button>
             </form>
             <p class="auth-toggle">
                 <a href="#" id="auth-toggle-link">Não tem uma conta? Cadastre-se</a>
@@ -31,69 +31,68 @@
     </div>
     
     <div id="app-container" class="hidden">
-        <header class="app-header">
-            <div class="header-left">
-                <h1><i class="fas fa-receipt"></i> Painel de Pedidos</h1>
-                <a href="cardapio.html" class="btn-secondary"><i class="fas fa-edit"></i> Gerenciar Cardápio</a>
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2><i class="fas fa-tasks"></i> Fila de Pedidos</h2>
+                <button id="deleteAllOrdersBtn" class="btn-danger btn-small" title="Excluir todos os pedidos do dia"><i class="fas fa-trash"></i> Limpar Dia</button>
             </div>
-            <div class="header-right">
-                <button id="logout-btn" class="btn-secondary logout"><i class="fas fa-sign-out-alt"></i> Sair</button>
+            <div class="order-controls">
+                <div class="order-filters">
+                    <button class="filter-btn active" data-status="em preparo">Em Preparo</button>
+                    <button class="filter-btn" data-status="pronto">Prontos</button>
+                </div>
+                <div class="search-wrapper">
+                    <i class="fas fa-search"></i>
+                    <input type="search" id="searchInput" placeholder="Buscar por Nome/N. Pedido...">
+                </div>
             </div>
-        </header>
+            <div id="orders-list"></div>
+        </aside>
 
-        <main class="app-main-grid">
-            <section id="orders-column" class="orders-column">
-                <div class="orders-column-header">
-                    <h2><i class="fas fa-tasks"></i> Fila de Pedidos</h2>
-                    <button id="deleteAllOrdersBtn" class="btn-danger btn-small" title="Excluir todos os pedidos"><i class="fas fa-trash"></i> Limpar Dia</button>
+        <main class="main-content">
+             <header class="app-header">
+                <button id="mobile-back-btn" class="btn-secondary mobile-only"><i class="fas fa-arrow-left"></i> Voltar para Fila</button>
+                <h1 class="desktop-only">Lançar Novo Pedido</h1>
+                <div>
+                    <a href="cardapio.html" class="btn-secondary"><i class="fas fa-edit"></i> Gerenciar Cardápio</a>
+                    <button id="logout-btn" class="btn-secondary logout"><i class="fas fa-sign-out-alt"></i> Sair</button>
                 </div>
-                <div class="order-controls">
-                    <div class="order-filters">
-                        <button class="filter-btn active" data-status="em preparo">Em Preparo</button>
-                        <button class="filter-btn" data-status="pronto">Prontos</button>
+            </header>
+            <div id="new-order-column">
+                <section id="menu-content">
+                    <div class="menu-groups-wrapper"></div>
+                    <div class="add-item-container">
+                         <button id="add-item-btn" class="btn-primary"><i class="fas fa-plus"></i> Adicionar Item</button>
                     </div>
-                    <div class="search-wrapper">
-                        <i class="fas fa-search"></i>
-                        <input type="search" id="searchInput" placeholder="Buscar por N. do Pedido...">
-                    </div>
-                </div>
-                <div id="orders-list">
-                    </div>
-            </section>
-            
-            <section id="menu-content" class="menu-content">
-                <div class="menu-groups-wrapper">
-                    </div>
-                <div class="add-item-container">
-                     <button id="add-item-btn" class="btn-primary"><i class="fas fa-plus"></i> Adicionar Item ao Pedido</button>
-                </div>
-            </section>
-
-            <section id="order-summary-panel" class="order-summary-panel">
-                <div id="order-form">
-                    <h2><i class="fas fa-shopping-basket"></i> Pedido Atual</h2>
-                    <div id="order-summary-items">
-                        <p class="placeholder">Selecione um prato para começar...</p>
-                    </div>
-                    <div class="order-details-inputs">
-                        <input type="text" id="cliente-name" placeholder="Nome do Cliente" required>
-                        <div class="radio-group">
-                            <input type="radio" id="consumo_loja" name="tipo_pedido" value="Consumir na Loja"><label for="consumo_loja">Na Loja</label>
-                            <input type="radio" id="retirada" name="tipo_pedido" value="Retirada" checked><label for="retirada">Retirada</label>
-                            <input type="radio" id="entrega" name="tipo_pedido" value="Entrega"><label for="entrega">Entrega</label>
+                </section>
+                <section id="order-summary-panel">
+                    <div id="order-form">
+                        <h2><i class="fas fa-shopping-basket"></i> Pedido Atual</h2>
+                        <div id="order-summary-items">
+                            <p class="placeholder">Selecione um prato...</p>
                         </div>
-                        <input type="text" id="extra-items" placeholder="Adicionar algo do mercado?">
-                        <input type="hidden" id="editing-order-id">
-                        <button id="save-print-btn" class="btn-primary"><i class="fas fa-print"></i> Finalizar e Imprimir</button>
-                        <button id="new-order-btn" class="btn-secondary hidden"><i class="fas fa-undo"></i> Cancelar Edição</button>
+                        <div class="order-details-inputs">
+                            <input type="text" id="cliente-name" placeholder="Nome do Cliente" required>
+                            <div class="radio-group">
+                                <input type="radio" id="consumo_loja" name="tipo_pedido" value="Na Loja"><label for="consumo_loja">Na Loja</label>
+                                <input type="radio" id="retirada" name="tipo_pedido" value="Retirada" checked><label for="retirada">Retirada</label>
+                                <input type="radio" id="entrega" name="tipo_pedido" value="Entrega"><label for="entrega">Entrega</label>
+                            </div>
+                            <input type="text" id="extra-items" placeholder="Adicionar algo do mercado?">
+                            <input type="hidden" id="editing-order-id">
+                            <button id="save-print-btn" class="btn-primary"><i class="fas fa-print"></i> Finalizar e Imprimir</button>
+                            <button id="new-order-btn" class="btn-secondary hidden"><i class="fas fa-undo"></i> Cancelar Edição</button>
+                        </div>
                     </div>
-                </div>
-            </section>
+                </section>
+            </div>
         </main>
+
+        <button id="mobile-fab" class="mobile-only"><i class="fas fa-plus"></i> Novo Pedido</button>
     </div>
 
     <div id="recibo-container"></div>
-
+    
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
