@@ -145,7 +145,7 @@ function initAppPage() {
     let currentFilter = 'em preparo';
     let unsubscribeOrders;
 
-    // LÓGICA DE INICIALIZAÇÃO E AUTENTICAÇÃO
+    // LÓGICA DE INICIALIZAÇÃO
     auth.onAuthStateChanged(async (user) => {
         if (user) {
             loginContainer.classList.add('hidden');
@@ -384,7 +384,6 @@ function initAppPage() {
 
     function showOrderModal(order) {
         if (!order) return;
-        
         let itemsHTML = order.items.map(item => `
             <div class="modal-item">
                 <strong>- ${item.dish}</strong>
@@ -507,21 +506,11 @@ function initAppPage() {
             updateOrderSummary();
         });
 
-        mobileFab.addEventListener('click', () => {
-            appContainer.classList.add('view-main');
-        });
-
-        mobileBackBtn.addEventListener('click', () => {
-            appContainer.classList.remove('view-main');
-        });
-
-        closeModalBtn.addEventListener('click', () => {
-            viewOrderModal.classList.add('hidden');
-        });
+        mobileFab.addEventListener('click', () => { appContainer.classList.add('view-main'); });
+        mobileBackBtn.addEventListener('click', () => { appContainer.classList.remove('view-main'); });
+        closeModalBtn.addEventListener('click', () => { viewOrderModal.classList.add('hidden'); });
         viewOrderModal.addEventListener('click', e => {
-            if (e.target === viewOrderModal) {
-                viewOrderModal.classList.add('hidden');
-            }
+            if (e.target === viewOrderModal) { viewOrderModal.classList.add('hidden'); }
         });
     }
 }
