@@ -15,6 +15,7 @@ const firebaseConfig = {
 const app = firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();
+const serverTimestamp = firebase.firestore.FieldValue.serverTimestamp;
 
 document.addEventListener('DOMContentLoaded', () => {
     const path = window.location.pathname;
@@ -141,13 +142,13 @@ function initAppPage() {
     let currentFilter = 'em preparo';
     let unsubscribeOrders;
 
-    // LÓGICA DE INICIALIZAÇÃO
+    // LÓGICA DE INICIALIZAÇÃO E AUTENTICAÇÃO
     auth.onAuthStateChanged(async (user) => {
         if (user) {
             loginContainer.classList.add('hidden');
             appContainer.classList.remove('hidden');
             await loadMenu();
-            setupEventListeners(); // Ativa todos os listeners da página principal
+            setupAppEventListeners();
             listenToOrders();
         } else {
             loginContainer.classList.remove('hidden');
@@ -156,7 +157,6 @@ function initAppPage() {
         }
     });
     
-    // SETUP DE EVENT LISTENERS GLOBAIS (LOGIN/CADASTRO)
     authToggleLink.addEventListener('click', e => {
         e.preventDefault();
         loginForm.classList.toggle('hidden');
@@ -167,8 +167,27 @@ function initAppPage() {
         authToggleLink.innerText = isLogin ? 'Não tem uma conta? Cadastre-se' : 'Já tem uma conta? Faça Login';
     });
 
-    loginForm.addEventListener('submit', e => { e.preventDefault(); auth.signInWithEmailAndPassword(loginForm['login-email'].value, loginForm['login-password'].value).catch(err => alert(err.message)); });
-    registerForm.addEventListener('submit', e => { e.preventDefault(); auth.createUserWithEmailAndPassword(registerForm['register-email'].value, registerForm['register-password'].value).catch(err => alert(err.message)); });
+    loginForm.addEventListener('submit', e => {
+        e.preventDefault();
+        const email = loginForm['login-email'].value;
+        const password = loginForm['login-password'].value;
+        auth.signInWithEmailAndPassword(email, password).catch(err => alert(err.message));
+    });
+
+    registerForm.addEventListener('submit', e => {
+        e.preventDefault();
+        const email = registerForm['register-email'].value;
+        const password = registerForm['register-password'].value;
+        auth.createUserWithEmailAndPassword(email, password).catch(err => {
+            if (err.code == 'auth/weak-password') {
+                alert('Senha muito fraca. A senha deve ter no mínimo 6 caracteres.');
+            } else if (err.code == 'auth/email-already-in-use') {
+                alert('Este e-mail já está cadastrado.');
+            } else {
+                alert('Erro ao cadastrar: ' + err.message);
+            }
+        });
+    });
 
     // FUNÇÕES DE LÓGICA
     const resetEntireOrder = () => {
@@ -256,7 +275,6 @@ function initAppPage() {
             : db.collection('pedidos').add(orderData);
 
         operation.then((docRef) => {
-            // Para garantir que temos todos os dados para impressão, mesmo em um novo pedido
             const finalOrderData = { id: orderId || docRef.id, ...orderData };
             printReceipt(finalOrderData);
             resetEntireOrder();
@@ -354,19 +372,24 @@ function initAppPage() {
 
     const deleteAllOrders = () => {
         if (!confirm('ATENÇÃO MÁXIMA:\nEsta ação vai APAGAR PERMANENTEMENTE TODOS OS PEDIDOS (prontos e em preparo) do banco de dados.\n\nEsta ação é irreversível e visa economizar espaço no Firebase. Deseja continuar?')) return;
+        
+        let deletedCount = 0; // Variável para a contagem
 
         db.collection('pedidos').get().then(snapshot => {
             if (snapshot.empty) {
                 alert("Não há nenhum pedido no banco de dados para excluir.");
                 return;
             }
+            deletedCount = snapshot.size; // Guarda o número antes de deletar
             const batch = db.batch();
             snapshot.docs.forEach(doc => {
                 batch.delete(doc.ref);
             });
             return batch.commit();
-        }).then((numDeleted) => {
-            alert(`Todos os pedidos foram excluídos com sucesso do Firebase.`);
+        }).then(() => {
+            if (deletedCount > 0) {
+                alert(`Todos os ${deletedCount} pedidos foram excluídos com sucesso do Firebase.`);
+            }
         }).catch(err => {
             console.error("Erro ao excluir todos os pedidos:", err);
             alert("ERRO: Não foi possível excluir os pedidos. Verifique o console para mais detalhes.");
@@ -394,7 +417,13 @@ function initAppPage() {
         });
     }
     
-    function setupEventListeners() {
+    function setupAppEventListeners() {
+        logoutBtn.addEventListener('click', () => auth.signOut());
+        savePrintBtn.addEventListener('click', saveAndPrintOrder);
+        newOrderBtn.addEventListener('click', resetEntireOrder);
+        deleteAllOrdersBtn.addEventListener('click', deleteAllOrders);
+        searchInput.addEventListener('input', renderOrders);
+        
         orderFilters.addEventListener('click', e => {
             const target = e.target.closest('.filter-btn');
             if(!target) return;
@@ -410,20 +439,25 @@ function initAppPage() {
             
             const action = target.dataset.action;
             const card = target.closest('.order-item-card');
+            if (!card) return;
             const orderId = card.dataset.id;
+            
+            if (!orderId) {
+                console.error("Não foi possível encontrar o ID do pedido no card.");
+                return;
+            }
+            
             const orderData = displayedOrders.find(o => o.id === orderId);
 
-            if (!orderData) return;
-
             if (action === 'complete') {
-                db.collection('pedidos').doc(orderId).update({ status: 'pronto' });
+                db.collection('pedidos').doc(orderId).update({ status: 'pronto' }).catch(err => console.error("Erro ao completar:", err));
             } else if (action === 'reopen') {
-                db.collection('pedidos').doc(orderId).update({ status: 'em preparo' });
+                db.collection('pedidos').doc(orderId).update({ status: 'em preparo' }).catch(err => console.error("Erro ao reabrir:", err));
             } else if (action === 'reprint') {
-                printReceipt(orderData);
+                if(orderData) printReceipt(orderData);
             } else if (action === 'delete') {
-                if (confirm(`ATENÇÃO:\nEsta ação vai APAGAR PERMANENTEMENTE o pedido de ${orderData.cliente}.\n\nDeseja continuar?`)) {
-                    db.collection('pedidos').doc(orderId).delete();
+                if (confirm(`ATENÇÃO:\nEsta ação vai APAGAR PERMANENTEMENTE o pedido de ${orderData?.cliente || 'desconhecido'}.\n\nDeseja continuar?`)) {
+                    db.collection('pedidos').doc(orderId).delete().catch(err => console.error("Erro ao deletar:", err));
                 }
             } else if (action === 'edit') {
                 editOrder(orderId);
@@ -488,11 +522,5 @@ function initAppPage() {
             }
             updateOrderSummary();
         });
-
-        searchInput.addEventListener('input', renderOrders);
-        logoutBtn.addEventListener('click', () => auth.signOut());
-        savePrintBtn.addEventListener('click', saveAndPrintOrder);
-        newOrderBtn.addEventListener('click', resetEntireOrder);
-        deleteAllOrdersBtn.addEventListener('click', deleteAllOrders);
     }
 }
