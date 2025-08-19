@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de pedidos - Mania Mix</title>
+    <link rel="icon" href="logo_mania.jpg" type="image/jpeg">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+</head>
+<body>
+
+    <div id="login-container">
+        <div class="auth-box">
+            <h1 id="auth-title">Pedidos Mania Mix</h1>
+            <p id="auth-subtitle">Acesse sua conta para iniciar</p>
+            <form id="login-form">
+                <input type="email" id="login-email" placeholder="E-mail" required>
+                <input type="password" id="login-password" placeholder="Senha" required>
+                <button type="submit" id="login-btn">Entrar</button>
+            </form>
+            <form id="register-form" class="hidden">
+                <input type="email" id="register-email" placeholder="Seu melhor e-mail" required>
+                <input type="password" id="register-password" placeholder="Crie uma senha forte" required>
+                <button type="submit" id="register-btn">Criar Conta e Entrar</button>
+            </form>
+            <p class="auth-toggle">
+                <a href="#" id="auth-toggle-link">Não tem uma conta? Cadastre-se</a>
+            </p>
+        </div>
+    </div>
+    
+    <div id="app-container" class="hidden">
+        <header class="app-header">
+            <div class="header-left">
+                <h1><i class="fas fa-receipt"></i> Painel de Pedidos</h1>
+                <a href="cardapio.html" class="btn-secondary"><i class="fas fa-edit"></i> Gerenciar Cardápio</a>
+            </div>
+            <div class="header-right">
+                <button id="logout-btn" class="btn-secondary logout"><i class="fas fa-sign-out-alt"></i> Sair</button>
+            </div>
+        </header>
+
+        <main class="app-main-grid">
+            <section id="orders-column" class="orders-column">
+                <div class="orders-column-header">
+                    <h2><i class="fas fa-tasks"></i> Fila de Pedidos</h2>
+                    <button id="deleteAllOrdersBtn" class="btn-danger btn-small" title="Excluir todos os pedidos"><i class="fas fa-trash"></i> Limpar Dia</button>
+                </div>
+                <div class="order-controls">
+                    <div class="order-filters">
+                        <button class="filter-btn active" data-status="em preparo">Em Preparo</button>
+                        <button class="filter-btn" data-status="pronto">Prontos</button>
+                    </div>
+                    <div class="search-wrapper">
+                        <i class="fas fa-search"></i>
+                        <input type="search" id="searchInput" placeholder="Buscar por N. do Pedido...">
+                    </div>
+                </div>
+                <div id="orders-list">
+                    </div>
+            </section>
+            
+            <section id="menu-content" class="menu-content">
+                <div class="menu-groups-wrapper">
+                    </div>
+                <div class="add-item-container">
+                     <button id="add-item-btn" class="btn-primary"><i class="fas fa-plus"></i> Adicionar Item ao Pedido</button>
+                </div>
+            </section>
+
+            <section id="order-summary-panel" class="order-summary-panel">
+                <div id="order-form">
+                    <h2><i class="fas fa-shopping-basket"></i> Pedido Atual</h2>
+                    <div id="order-summary-items">
+                        <p class="placeholder">Selecione um prato para começar...</p>
+                    </div>
+                    <div class="order-details-inputs">
+                        <input type="text" id="cliente-name" placeholder="Nome do Cliente" required>
+                        <div class="radio-group">
+                            <input type="radio" id="consumo_loja" name="tipo_pedido" value="Consumir na Loja"><label for="consumo_loja">Na Loja</label>
+                            <input type="radio" id="retirada" name="tipo_pedido" value="Retirada" checked><label for="retirada">Retirada</label>
+                            <input type="radio" id="entrega" name="tipo_pedido" value="Entrega"><label for="entrega">Entrega</label>
+                        </div>
+                        <input type="text" id="extra-items" placeholder="Adicionar algo do mercado?">
+                        <input type="hidden" id="editing-order-id">
+                        <button id="save-print-btn" class="btn-primary"><i class="fas fa-print"></i> Finalizar e Imprimir</button>
+                        <button id="new-order-btn" class="btn-secondary hidden"><i class="fas fa-undo"></i> Cancelar Edição</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="recibo-container"></div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

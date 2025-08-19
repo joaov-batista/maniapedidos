@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de pedidos - Mania Mix</title>
+    <link rel="icon" href="logo_mania.jpg" type="image/jpeg">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+</head>
+<body class="admin-page-body">
+    <div class="admin-container">
+        <header class="admin-header">
+            <h1><i class="fas fa-edit"></i> Gerenciar Cardápio do Dia</h1>
+            <p>Crie grupos, adicione pratos e acompanhamentos. Um item por linha.</p>
+        </header>
+
+        <div id="menu-groups-container">
+            </div>
+
+        <div class="admin-actions">
+            <a href="index.html" class="btn-secondary"><i class="fas fa-arrow-left"></i> Voltar</a>
+            <button id="add-group-btn" class="btn-secondary"><i class="fas fa-plus"></i> Adicionar Grupo</button>
+            <button id="save-menu-btn" class="btn-primary"><i class="fas fa-save"></i> Salvar Cardápio</button>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
