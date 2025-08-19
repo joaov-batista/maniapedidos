@@ -70,8 +70,6 @@ body {
 #orders-list { overflow-y: auto; flex-grow: 1; padding-right: 0.5rem; }
 .order-item-card { background: var(--primary-color); padding: 1rem; border-radius: var(--border-radius); margin-bottom: 1rem; border-left: 4px solid var(--accent-color); cursor: pointer; }
 .order-item-card.status-pronto { border-left-color: var(--success-color); }
-.order-item-card:hover { background-color: var(--card-bg); }
-.order-item-card.editing { border: 1px solid var(--success-color); }
 .order-item-card h4 { font-size: 1.1rem; } .order-item-card p { font-size: 0.9rem; color: var(--text-secondary); }
 .order-card-actions { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
 .order-card-actions button { background-color: var(--card-bg); }
@@ -161,11 +159,9 @@ body {
 
 /* --- SEÇÃO RESPONSIVA --- */
 @media (max-width: 1024px) {
-    body { overflow: auto; }
     #app-container { padding: 0; }
-    .app-main-grid { display: block; }
     .sidebar {
-        width: 100%; height: 100vh;
+        width: 100%; height: 100%;
         padding: 1rem;
         transition: transform 0.3s ease-in-out;
         z-index: 10;
@@ -179,18 +175,22 @@ body {
         transform: translateX(100%);
         transition: transform 0.3s ease-in-out;
         z-index: 20;
-        overflow-y: auto;
+        overflow-y: auto; /* Garante a rolagem da view principal */
     }
+    
     #app-container.view-main .sidebar { transform: translateX(-100%); }
     #app-container.view-main .main-content { transform: translateX(0); }
+
     #new-order-column { display: flex; flex-direction: column; gap: 1.5rem; }
     #menu-content, #order-summary-panel { overflow: visible; height: auto; flex-shrink: 0; }
     .desktop-only { display: none !important; }
     .mobile-only { display: flex !important; }
+
     .app-header { padding: 0 1rem; }
     .app-header h1 { font-size: 1.2rem; }
     .app-header .btn-secondary { padding: 0.5rem; }
     .app-header .btn-secondary i { margin: 0; }
+
     #mobile-fab {
         position: fixed;
         bottom: 2rem; right: 2rem;
@@ -204,6 +204,7 @@ body {
         box-shadow: 0 5px 15px rgba(0,0,0,0.3);
         gap: 0.5rem;
     }
+
     .admin-container { margin: 1rem; padding: 1rem; }
     .menu-group-admin-card div { flex-direction: column; }
     .admin-actions { position: static; margin: 1rem 0 0 0; padding: 1rem 0 0 0; border-radius: 0; }
