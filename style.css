@@ -148,7 +148,7 @@ body {
 /* --- SEÇÃO RESPONSIVA --- */
 @media (max-width: 1024px) {
     #app-container { padding: 0; }
-    .app-main-grid { display: block; } /* Desfaz o grid no mobile */
+    .app-main-grid { display: block; }
 
     .sidebar {
         width: 100%; height: 100vh;
@@ -165,9 +165,9 @@ body {
         transform: translateX(100%);
         transition: transform 0.3s ease-in-out;
         z-index: 20;
+        overflow-y: auto;
     }
     
-    /* Classe de controle via JS */
     #app-container.view-main .sidebar { transform: translateX(-100%); }
     #app-container.view-main .main-content { transform: translateX(0); }
 
@@ -180,6 +180,8 @@ body {
 
     .app-header { padding: 0 1rem; }
     .app-header h1 { font-size: 1.2rem; }
+    .app-header .btn-secondary { padding: 0.5rem; }
+    .app-header .btn-secondary i { margin: 0; }
 
     #mobile-fab {
         position: fixed;
@@ -195,8 +197,6 @@ body {
         gap: 0.5rem;
     }
 
-    /* Ajustes na página admin */
-    .admin-page-body { overflow-y: auto; }
     .admin-container { margin: 1rem; padding: 1rem; }
     .menu-group-admin-card div { flex-direction: column; }
     .admin-actions { position: static; margin: 1rem 0 0 0; padding: 1rem 0 0 0; border-radius: 0; }
