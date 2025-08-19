@@ -145,7 +145,7 @@ function initAppPage() {
     let currentFilter = 'em preparo';
     let unsubscribeOrders;
 
-    // LÓGICA DE INICIALIZAÇÃO
+    // LÓGICA DE INICIALIZAÇÃO E AUTENTICAÇÃO
     auth.onAuthStateChanged(async (user) => {
         if (user) {
             loginContainer.classList.add('hidden');
@@ -159,6 +159,44 @@ function initAppPage() {
             if (unsubscribeOrders) unsubscribeOrders();
         }
     });
+    
+    // SETUP DE EVENT LISTENERS (SEPARADO PARA CORRIGIR O BUG)
+    function setupAuthEventListeners() {
+        authToggleLink.addEventListener('click', e => {
+            e.preventDefault();
+            loginForm.classList.toggle('hidden');
+            registerForm.classList.toggle('hidden');
+            const authTitle = document.getElementById('auth-title');
+            const authSubtitle = document.getElementById('auth-subtitle');
+            const isLogin = !loginForm.classList.contains('hidden');
+            authTitle.innerText = isLogin ? 'Pedidos Mania Mix' : 'Crie sua Conta';
+            authSubtitle.innerText = isLogin ? 'Acesse sua conta para iniciar' : 'É rápido e fácil.';
+            authToggleLink.innerText = isLogin ? 'Não tem uma conta? Cadastre-se' : 'Já tem uma conta? Faça Login';
+        });
+
+        loginForm.addEventListener('submit', e => {
+            e.preventDefault();
+            const email = loginForm['login-email'].value;
+            const password = loginForm['login-password'].value;
+            auth.signInWithEmailAndPassword(email, password).catch(err => alert(err.message));
+        });
+
+        registerForm.addEventListener('submit', e => {
+            e.preventDefault();
+            const email = registerForm['register-email'].value;
+            const password = registerForm['register-password'].value;
+            auth.createUserWithEmailAndPassword(email, password).catch(err => {
+                if (err.code == 'auth/weak-password') {
+                    alert('Senha muito fraca. A senha deve ter no mínimo 6 caracteres.');
+                } else if (err.code == 'auth/email-already-in-use') {
+                    alert('Este e-mail já está cadastrado.');
+                } else {
+                    alert('Erro ao cadastrar: ' + err.message);
+                }
+            });
+        });
+    }
+    setupAuthEventListeners(); // Ativa os listeners de login imediatamente
 
     // FUNÇÕES DE LÓGICA
     function resetEntireOrder() {
@@ -402,18 +440,6 @@ function initAppPage() {
     }
     
     function setupAppEventListeners() {
-        authToggleLink.addEventListener('click', e => {
-            e.preventDefault();
-            loginForm.classList.toggle('hidden');
-            registerForm.classList.toggle('hidden');
-            const authTitle = document.getElementById('auth-title');
-            const authSubtitle = document.getElementById('auth-subtitle');
-            const isLogin = !loginForm.classList.contains('hidden');
-            authTitle.innerText = isLogin ? 'Pedidos Mania Mix' : 'Crie sua Conta';
-            authSubtitle.innerText = isLogin ? 'Acesse sua conta para iniciar' : 'É rápido e fácil.';
-            authToggleLink.innerText = isLogin ? 'Não tem uma conta? Cadastre-se' : 'Já tem uma conta? Faça Login';
-        });
-
         logoutBtn.addEventListener('click', () => auth.signOut());
         savePrintBtn.addEventListener('click', saveAndPrintOrder);
         newOrderBtn.addEventListener('click', resetEntireOrder);
@@ -449,6 +475,8 @@ function initAppPage() {
                 } else if (action === 'edit') {
                     editOrder(orderId);
                     if (window.innerWidth <= 1024) { appContainer.classList.add('view-main'); }
+                } else if (action === 'view') {
+                    showOrderModal(orderData);
                 }
             } else {
                 showOrderModal(orderData);
