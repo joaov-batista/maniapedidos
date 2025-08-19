@@ -43,6 +43,18 @@
                     <button class="filter-btn" data-status="pronto">Prontos</button>
                     <button class="filter-btn" data-status="cancelado">Cancelados</button>
                 </div>
+                <div class="order-filters type-filters">
+                    <button class="filter-btn active" data-type="todos">Todos</button>
+                    <button class="filter-btn" data-type="Na Loja">Na Loja</button>
+                    <button class="filter-btn" data-type="Retirada">Retirada</button>
+                    <button class="filter-btn" data-type="Entrega">Entrega</button>
+                </div>
+                <div class="priority-filter-wrapper">
+                    <button id="priority-toggle-btn" class="priority-toggle" title="Filtrar por prioridade">
+                       <i class="fas fa-star"></i>
+                       <span>Apenas Prioritários</span>
+                    </button>
+                </div>
                 <div class="search-wrapper">
                     <i class="fas fa-search"></i>
                     <input type="search" id="searchInput" placeholder="Buscar por Nome/N. Pedido...">
@@ -81,7 +93,11 @@
                                 <input type="radio" id="retirada" name="tipo_pedido" value="Retirada" checked><label for="retirada">Retirada</label>
                                 <input type="radio" id="entrega" name="tipo_pedido" value="Entrega"><label for="entrega">Entrega</label>
                             </div>
-                            <input type="text" id="extra-items" placeholder="Adicionar algo do mercado?">
+                            <div class="checkbox-wrapper">
+                                <input type="checkbox" id="prioridade-check">
+                                <label for="prioridade-check">Pedido Prioritário / Urgente</label>
+                            </div>
+                            <input type="text" id="extra-items" placeholder="Extra">
                             <input type="hidden" id="editing-order-id">
                             <button id="save-print-btn" class="btn-primary"><i class="fas fa-print"></i> Finalizar e Imprimir</button>
                             <button id="new-order-btn" class="btn-secondary hidden"><i class="fas fa-undo"></i> Cancelar Edição</button>
