@@ -142,7 +142,7 @@ function initAppPage() {
     let menuData = [];
     let currentOrderItems = [];
     let displayedOrders = [];
-    let currentFilter = 'em preparo';
+    let currentFilter = 'pendente';
     let unsubscribeOrders;
 
     // LÓGICA DE INICIALIZAÇÃO E AUTENTICAÇÃO
@@ -159,8 +159,7 @@ function initAppPage() {
             if (unsubscribeOrders) unsubscribeOrders();
         }
     });
-    
-    // SETUP DE EVENT LISTENERS (SEPARADO PARA CORRIGIR O BUG)
+
     function setupAuthEventListeners() {
         authToggleLink.addEventListener('click', e => {
             e.preventDefault();
@@ -196,7 +195,7 @@ function initAppPage() {
             });
         });
     }
-    setupAuthEventListeners(); // Ativa os listeners de login imediatamente
+    setupAuthEventListeners();
 
     // FUNÇÕES DE LÓGICA
     function resetEntireOrder() {
@@ -275,7 +274,7 @@ function initAppPage() {
             items: currentOrderItems,
             extras: extraItemsInput.value.trim(),
             tipo: document.querySelector('input[name="tipo_pedido"]:checked').value,
-            status: 'em preparo',
+            status: 'pendente',
             timestamp: serverTimestamp()
         };
 
@@ -345,17 +344,24 @@ function initAppPage() {
                 card.className = `order-item-card status-${order.status}`;
                 card.dataset.id = order.id;
                 const displayId = order.id.toString().slice(-6);
+                
+                let actionButtonsHTML = '';
+                if (order.status === 'pendente') {
+                    actionButtonsHTML = `<button class="btn-success btn-small" data-action="start" title="Iniciar Preparo"><i class="fas fa-play"></i></button>`;
+                } else if (order.status === 'em preparo') {
+                    actionButtonsHTML = `<button class="btn-success btn-small" data-action="complete" title="Marcar como Pronto"><i class="fas fa-check"></i></button>`;
+                } else if (order.status === 'pronto') {
+                    actionButtonsHTML = `<button class="btn-secondary btn-small" data-action="reopen" title="Marcar como Em Preparo"><i class="fas fa-undo"></i></button>`;
+                }
+
                 card.innerHTML = `
                     <h4>${order.cliente}</h4>
                     <p>Pedido #${displayId} - ${order.items.length} item(s)</p>
                     <div class="order-card-actions">
                         <button class="btn-secondary btn-small" data-action="view" title="Visualizar Pedido"><i class="fas fa-eye"></i></button>
                         <button class="btn-secondary btn-small" data-action="edit" title="Editar Pedido"><i class="fas fa-edit"></i></button>
-                        <button class="btn-danger btn-small" data-action="delete" title="Apagar Pedido"><i class="fas fa-trash"></i></button>
-                        ${order.status === 'em preparo' ? 
-                            `<button class="btn-success btn-small" data-action="complete" title="Marcar como Pronto"><i class="fas fa-check"></i></button>` : 
-                            `<button class="btn-secondary btn-small" data-action="reopen" title="Marcar como Em Preparo"><i class="fas fa-undo"></i></button>`
-                        }
+                        ${order.status !== 'cancelado' ? `<button class="btn-danger btn-small" data-action="cancel" title="Cancelar Pedido"><i class="fas fa-times"></i></button>` : ''}
+                        ${actionButtonsHTML}
                     </div>
                 `;
                 ordersList.appendChild(card);
@@ -465,18 +471,22 @@ function initAppPage() {
 
             if (button) {
                 const action = button.dataset.action;
-                if (action === 'complete') { db.collection('pedidos').doc(orderId).update({ status: 'pronto' }); }
+                if (action === 'start') { db.collection('pedidos').doc(orderId).update({ status: 'em preparo' }); }
+                else if (action === 'complete') { db.collection('pedidos').doc(orderId).update({ status: 'pronto' }); }
                 else if (action === 'reopen') { db.collection('pedidos').doc(orderId).update({ status: 'em preparo' }); }
-                else if (action === 'reprint') { printReceipt(orderData); }
-                else if (action === 'delete') {
+                else if (action === 'cancel') {
+                    if (confirm(`Tem certeza que deseja CANCELAR o pedido de ${orderData?.cliente}?`)) {
+                        db.collection('pedidos').doc(orderId).update({ status: 'cancelado' });
+                    }
+                }
+                else if (action === 'view') { showOrderModal(orderData); }
+                else if (action === 'edit') {
+                    editOrder(orderId);
+                    if (window.innerWidth <= 1024) { appContainer.classList.add('view-main'); }
+                } else if (action === 'delete') {
                     if (confirm(`ATENÇÃO:\nVai APAGAR o pedido de ${orderData?.cliente}.\n\nDeseja continuar?`)) {
                         db.collection('pedidos').doc(orderId).delete();
                     }
-                } else if (action === 'edit') {
-                    editOrder(orderId);
-                    if (window.innerWidth <= 1024) { appContainer.classList.add('view-main'); }
-                } else if (action === 'view') {
-                    showOrderModal(orderData);
                 }
             } else {
                 showOrderModal(orderData);
