@@ -131,21 +131,26 @@ function initAppPage() {
     const addItemBtn = document.getElementById('add-item-btn');
     const deleteAllOrdersBtn = document.getElementById('deleteAllOrdersBtn');
     const orderFilters = document.querySelector('.order-filters');
+    const typeFilters = document.querySelector('.type-filters');
+    const priorityToggleBtn = document.getElementById('priority-toggle-btn');
     const searchInput = document.getElementById('searchInput');
     const mobileFab = document.getElementById('mobile-fab');
     const mobileBackBtn = document.getElementById('mobile-back-btn');
     const viewOrderModal = document.getElementById('view-order-modal');
     const closeModalBtn = document.getElementById('close-modal-btn');
     const modalOrderDetails = document.getElementById('modal-order-details');
+    const prioridadeCheck = document.getElementById('prioridade-check');
 
     // ESTADO
     let menuData = [];
     let currentOrderItems = [];
     let displayedOrders = [];
-    let currentFilter = 'pendente';
+    let currentStatusFilter = 'pendente';
+    let currentTypeFilter = 'todos';
+    let priorityFilterActive = false;
     let unsubscribeOrders;
 
-    // LÓGICA DE INICIALIZAÇÃO E AUTENTICAÇÃO
+    // LÓGICA DE INICIALIZAÇÃO
     auth.onAuthStateChanged(async (user) => {
         if (user) {
             loginContainer.classList.add('hidden');
@@ -203,6 +208,7 @@ function initAppPage() {
         clienteNameInput.value = '';
         extraItemsInput.value = '';
         editingOrderIdInput.value = '';
+        prioridadeCheck.checked = false;
         document.querySelector('#retirada').checked = true;
         document.querySelectorAll('.order-item-card.editing').forEach(c => c.classList.remove('editing'));
         savePrintBtn.innerHTML = '<i class="fas fa-print"></i> Finalizar e Imprimir';
@@ -275,6 +281,8 @@ function initAppPage() {
             extras: extraItemsInput.value.trim(),
             tipo: document.querySelector('input[name="tipo_pedido"]:checked').value,
             status: 'pendente',
+            prioridade: prioridadeCheck.checked,
+            cancelReason: '',
             timestamp: serverTimestamp()
         };
 
@@ -305,7 +313,7 @@ function initAppPage() {
         
         const reciboHTML = `
             <div class="recibo-header">
-                <h1>${order.tipo.toUpperCase()}</h1>
+                <h1>${order.tipo.toUpperCase()}${order.prioridade ? ' - URGENTE' : ''}</h1>
             </div>
             <hr>
             <div class="recibo-info">
@@ -328,7 +336,12 @@ function initAppPage() {
         const searchTerm = searchInput.value.toLowerCase();
 
         const filteredOrders = displayedOrders
-            .filter(order => order.status === currentFilter)
+            .filter(order => order.status === currentStatusFilter)
+            .filter(order => currentTypeFilter === 'todos' || order.tipo === currentTypeFilter)
+            .filter(order => {
+                if (!priorityFilterActive) return true;
+                return order.prioridade === true;
+            })
             .filter(order => {
                 if (searchTerm === '') return true;
                 const orderId = (order.id || '').toString().slice(-6);
@@ -355,6 +368,7 @@ function initAppPage() {
                 }
 
                 card.innerHTML = `
+                    ${order.prioridade ? '<i class="fas fa-star priority-icon" title="Pedido Urgente"></i>' : ''}
                     <h4>${order.cliente}</h4>
                     <p>Pedido #${displayId} - ${order.items.length} item(s)</p>
                     <div class="order-card-actions">
@@ -379,6 +393,7 @@ function initAppPage() {
         clienteNameInput.value = orderToEdit.cliente;
         extraItemsInput.value = orderToEdit.extras;
         document.querySelector(`input[name="tipo_pedido"][value="${orderToEdit.tipo}"]`).checked = true;
+        prioridadeCheck.checked = orderToEdit.prioridade || false;
         currentOrderItems = JSON.parse(JSON.stringify(orderToEdit.items));
         updateOrderSummary();
         savePrintBtn.innerHTML = '<i class="fas fa-edit"></i> Atualizar Pedido';
@@ -439,7 +454,9 @@ function initAppPage() {
             <p><strong>Cliente:</strong> ${order.cliente}</p>
             <p><strong>Tipo:</strong> ${order.tipo}</p>
             <p><strong>Status:</strong> ${order.status}</p>
+            <p><strong>Prioridade:</strong> ${order.prioridade ? 'Sim' : 'Não'}</p>
             ${order.extras ? `<p><strong>Extras:</strong> ${order.extras}</p>` : ''}
+            ${order.status === 'cancelado' && order.cancelReason ? `<p><strong>Motivo do Cancelamento:</strong> ${order.cancelReason}</p>` : ''}
             <div class="modal-items-list">${itemsHTML}</div>
         `;
         viewOrderModal.classList.remove('hidden');
@@ -457,7 +474,22 @@ function initAppPage() {
             if(!target) return;
             orderFilters.querySelector('.active').classList.remove('active');
             target.classList.add('active');
-            currentFilter = target.dataset.status;
+            currentStatusFilter = target.dataset.status;
+            renderOrders();
+        });
+
+        typeFilters.addEventListener('click', e => {
+            const target = e.target.closest('.filter-btn');
+            if(!target) return;
+            typeFilters.querySelector('.active').classList.remove('active');
+            target.classList.add('active');
+            currentTypeFilter = target.dataset.type;
+            renderOrders();
+        });
+
+        priorityToggleBtn.addEventListener('click', () => {
+            priorityFilterActive = !priorityFilterActive;
+            priorityToggleBtn.classList.toggle('active', priorityFilterActive);
             renderOrders();
         });
 
@@ -475,8 +507,9 @@ function initAppPage() {
                 else if (action === 'complete') { db.collection('pedidos').doc(orderId).update({ status: 'pronto' }); }
                 else if (action === 'reopen') { db.collection('pedidos').doc(orderId).update({ status: 'em preparo' }); }
                 else if (action === 'cancel') {
-                    if (confirm(`Tem certeza que deseja CANCELAR o pedido de ${orderData?.cliente}?`)) {
-                        db.collection('pedidos').doc(orderId).update({ status: 'cancelado' });
+                    const reason = prompt(`Por favor, digite o motivo do cancelamento para o pedido de ${orderData?.cliente}:`);
+                    if (reason) {
+                        db.collection('pedidos').doc(orderId).update({ status: 'cancelado', cancelReason: reason });
                     }
                 }
                 else if (action === 'view') { showOrderModal(orderData); }
@@ -498,9 +531,11 @@ function initAppPage() {
                 document.querySelectorAll('.sides-container').forEach(c => { c.innerHTML = ''; c.classList.add('hidden'); });
                 const groupIndex = e.target.dataset.groupIndex;
                 const sidesContainer = document.getElementById(`sides-group-${groupIndex}`);
-                if (menuData[groupIndex] && menuData[groupIndex].sides.length > 0) {
+                if (menuData[groupIndex] && menuData[groupIndex].sides) {
                     sidesContainer.innerHTML = menuData[groupIndex].sides.map(s => `<label class="side-checkbox"><input type="checkbox" name="side" value="${s}">${s}</label>`).join('');
-                    sidesContainer.classList.remove('hidden');
+                    if (menuData[groupIndex].sides.length > 0) {
+                        sidesContainer.classList.remove('hidden');
+                    }
                 }
             }
         });
