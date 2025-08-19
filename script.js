@@ -142,7 +142,7 @@ function initAppPage() {
     let currentFilter = 'em preparo';
     let unsubscribeOrders;
 
-    // LÓGICA DE INICIALIZAÇÃO
+    // LÓGICA DE INICIALIZAÇÃO E AUTENTICAÇÃO
     auth.onAuthStateChanged(async (user) => {
         if (user) {
             loginContainer.classList.add('hidden');
@@ -155,6 +155,41 @@ function initAppPage() {
             appContainer.classList.add('hidden');
             if (unsubscribeOrders) unsubscribeOrders();
         }
+    });
+    
+    // Listeners de autenticação que devem estar sempre ativos
+    authToggleLink.addEventListener('click', e => {
+        e.preventDefault();
+        loginForm.classList.toggle('hidden');
+        registerForm.classList.toggle('hidden');
+        const isLogin = !loginForm.classList.contains('hidden');
+        const authTitle = document.getElementById('auth-title');
+        const authSubtitle = document.getElementById('auth-subtitle');
+        authTitle.innerText = isLogin ? 'Pedidos Mania Mix' : 'Crie sua Conta';
+        authSubtitle.innerText = isLogin ? 'Acesse sua conta para iniciar' : 'É rápido e fácil.';
+        authToggleLink.innerText = isLogin ? 'Não tem uma conta? Cadastre-se' : 'Já tem uma conta? Faça Login';
+    });
+
+    loginForm.addEventListener('submit', e => {
+        e.preventDefault();
+        const email = loginForm['login-email'].value;
+        const password = loginForm['login-password'].value;
+        auth.signInWithEmailAndPassword(email, password).catch(err => alert(err.message));
+    });
+
+    registerForm.addEventListener('submit', e => {
+        e.preventDefault();
+        const email = registerForm['register-email'].value;
+        const password = registerForm['register-password'].value;
+        auth.createUserWithEmailAndPassword(email, password).catch(err => {
+            if (err.code == 'auth/weak-password') {
+                alert('Senha muito fraca. A senha deve ter no mínimo 6 caracteres.');
+            } else if (err.code == 'auth/email-already-in-use') {
+                alert('Este e-mail já está cadastrado.');
+            } else {
+                alert('Erro ao cadastrar: ' + err.message);
+            }
+        });
     });
 
     // FUNÇÕES DE LÓGICA
@@ -339,7 +374,7 @@ function initAppPage() {
     }
 
     function deleteAllOrders() {
-        if (!confirm('ATENÇÃO MÁXIMA:\nEsta ação vai APAGAR PERMANENTEMENTE TODOS OS PEDIDOS (prontos e em preparo) do banco de dados.\n\nEsta ação é irreversível. Deseja continuar?')) return;
+        if (!confirm('ATENÇÃO MÁXIMA:\nEsta ação vai APAGAR PERMANENTEMENTE TODOS OS PEDIDOS do banco de dados.\n\nDeseja continuar?')) return;
         
         let deletedCount = 0;
         db.collection('pedidos').get().then(snapshot => {
@@ -355,7 +390,7 @@ function initAppPage() {
             return batch.commit();
         }).then(() => {
             if (deletedCount > 0) {
-                alert(`Todos os ${deletedCount} pedidos foram excluídos com sucesso do Firebase.`);
+                alert(`Todos os ${deletedCount} pedidos foram excluídos com sucesso.`);
             }
         }).catch(err => {
             console.error("Erro ao excluir todos os pedidos:", err);
@@ -374,7 +409,7 @@ function initAppPage() {
         }, err => {
             console.error("Erro ao ouvir pedidos:", err);
             if (err.message.includes("requires an index")) {
-                alert("ERRO: É necessário criar um índice no Firebase. Verifique o console para um link.");
+                alert("ERRO: É necessário criar um índice no Firebase. Verifique o console.");
             }
         });
     }
