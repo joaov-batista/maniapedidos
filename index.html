@@ -38,8 +38,10 @@
             </div>
             <div class="order-controls">
                 <div class="order-filters">
-                    <button class="filter-btn active" data-status="em preparo">Em Preparo</button>
+                    <button class="filter-btn active" data-status="pendente">Pendente</button>
+                    <button class="filter-btn" data-status="em preparo">Em Preparo</button>
                     <button class="filter-btn" data-status="pronto">Prontos</button>
+                    <button class="filter-btn" data-status="cancelado">Cancelados</button>
                 </div>
                 <div class="search-wrapper">
                     <i class="fas fa-search"></i>
@@ -53,8 +55,9 @@
              <header class="app-header">
                 <button id="mobile-back-btn" class="btn-secondary mobile-only"><i class="fas fa-arrow-left"></i> Voltar para Fila</button>
                 <h1 class="desktop-only">Lançar Novo Pedido</h1>
-                <div>
-                    <a href="cardapio.html" class="btn-secondary"><i class="fas fa-edit"></i> Gerenciar Cardápio</a>
+                <div class="header-actions">
+                    <a href="cardapio.html" class="btn-secondary desktop-only"><i class="fas fa-edit"></i> Gerenciar Cardápio</a>
+                    <a href="cardapio.html" class="btn-secondary mobile-only"><i class="fas fa-edit"></i></a>
                     <button id="logout-btn" class="btn-secondary logout"><i class="fas fa-sign-out-alt"></i> Sair</button>
                 </div>
             </header>
