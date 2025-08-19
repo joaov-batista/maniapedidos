@@ -50,7 +50,7 @@ function initAdminPage() {
             card.innerHTML = `
                 <button class="btn-danger btn-small delete-group-btn" title="Excluir este grupo"><i class="fas fa-trash"></i></button>
                 <input type="text" class="group-name" placeholder="Nome do Grupo (Ex: Pratos do Dia)" value="${group.name}">
-                <div style="display: flex; gap: 1rem;">
+                <div>
                     <textarea class="group-dishes" placeholder="Pratos (um por linha)">${group.dishes}</textarea>
                     <textarea class="group-sides" placeholder="Acompanhamentos (um por linha)">${group.sides}</textarea>
                 </div>
@@ -120,8 +120,6 @@ function initAppPage() {
     const loginForm = document.getElementById('login-form');
     const registerForm = document.getElementById('register-form');
     const authToggleLink = document.getElementById('auth-toggle-link');
-    const authTitle = document.getElementById('auth-title');
-    const authSubtitle = document.getElementById('auth-subtitle');
     const menuContent = document.querySelector('.menu-groups-wrapper');
     const ordersList = document.getElementById('orders-list');
     const orderSummaryItems = document.getElementById('order-summary-items');
@@ -134,6 +132,8 @@ function initAppPage() {
     const deleteAllOrdersBtn = document.getElementById('deleteAllOrdersBtn');
     const orderFilters = document.querySelector('.order-filters');
     const searchInput = document.getElementById('searchInput');
+    const mobileFab = document.getElementById('mobile-fab');
+    const mobileBackBtn = document.getElementById('mobile-back-btn');
 
     // ESTADO
     let menuData = [];
@@ -142,7 +142,7 @@ function initAppPage() {
     let currentFilter = 'em preparo';
     let unsubscribeOrders;
 
-    // LÓGICA DE INICIALIZAÇÃO E AUTENTICAÇÃO
+    // LÓGICA DE INICIALIZAÇÃO
     auth.onAuthStateChanged(async (user) => {
         if (user) {
             loginContainer.classList.add('hidden');
@@ -156,41 +156,9 @@ function initAppPage() {
             if (unsubscribeOrders) unsubscribeOrders();
         }
     });
-    
-    authToggleLink.addEventListener('click', e => {
-        e.preventDefault();
-        loginForm.classList.toggle('hidden');
-        registerForm.classList.toggle('hidden');
-        const isLogin = !loginForm.classList.contains('hidden');
-        authTitle.innerText = isLogin ? 'Pedidos Mania Mix' : 'Crie sua Conta';
-        authSubtitle.innerText = isLogin ? 'Acesse sua conta para iniciar' : 'É rápido e fácil.';
-        authToggleLink.innerText = isLogin ? 'Não tem uma conta? Cadastre-se' : 'Já tem uma conta? Faça Login';
-    });
-
-    loginForm.addEventListener('submit', e => {
-        e.preventDefault();
-        const email = loginForm['login-email'].value;
-        const password = loginForm['login-password'].value;
-        auth.signInWithEmailAndPassword(email, password).catch(err => alert(err.message));
-    });
-
-    registerForm.addEventListener('submit', e => {
-        e.preventDefault();
-        const email = registerForm['register-email'].value;
-        const password = registerForm['register-password'].value;
-        auth.createUserWithEmailAndPassword(email, password).catch(err => {
-            if (err.code == 'auth/weak-password') {
-                alert('Senha muito fraca. A senha deve ter no mínimo 6 caracteres.');
-            } else if (err.code == 'auth/email-already-in-use') {
-                alert('Este e-mail já está cadastrado.');
-            } else {
-                alert('Erro ao cadastrar: ' + err.message);
-            }
-        });
-    });
 
     // FUNÇÕES DE LÓGICA
-    const resetEntireOrder = () => {
+    function resetEntireOrder() {
         currentOrderItems = [];
         clienteNameInput.value = '';
         extraItemsInput.value = '';
@@ -201,18 +169,18 @@ function initAppPage() {
         newOrderBtn.classList.add('hidden');
         clearMenuSelection();
         updateOrderSummary();
-    };
+    }
 
-    const clearMenuSelection = () => {
+    function clearMenuSelection() {
         const selectedDish = document.querySelector('input[name="main-dish"]:checked');
         if (selectedDish) selectedDish.checked = false;
         document.querySelectorAll('.sides-container').forEach(c => {
             c.innerHTML = '';
             c.classList.add('hidden');
         });
-    };
+    }
 
-    const updateOrderSummary = () => {
+    function updateOrderSummary() {
         if (currentOrderItems.length === 0) {
             orderSummaryItems.innerHTML = '<p class="placeholder">Adicione itens ao pedido...</p>';
             return;
@@ -228,9 +196,9 @@ function initAppPage() {
                 </div>
             </div>
         `).join('');
-    };
+    }
 
-    const loadMenu = async () => {
+    async function loadMenu() {
         const docRef = db.collection('configuracao').doc('cardapio-do-dia');
         const docSnap = await docRef.get();
         if (docSnap.exists && docSnap.data().menu.length > 0) {
@@ -239,9 +207,9 @@ function initAppPage() {
         } else {
             menuContent.innerHTML = '<h3>👋 Cardápio do dia não cadastrado.</h3>';
         }
-    };
+    }
 
-    const renderMenu = (menu) => {
+    function renderMenu(menu) {
         menuContent.innerHTML = '';
         menu.forEach((group, groupIndex) => {
             const card = document.createElement('div');
@@ -253,9 +221,9 @@ function initAppPage() {
                 <div class="sides-container hidden" id="sides-group-${groupIndex}"></div>`;
             menuContent.appendChild(card);
         });
-    };
+    }
 
-    const saveAndPrintOrder = () => {
+    function saveAndPrintOrder() {
         const cliente = clienteNameInput.value.trim();
         if (currentOrderItems.length === 0) return alert('O pedido está vazio!');
         if (!cliente) return alert('Digite o nome do cliente!');
@@ -279,9 +247,9 @@ function initAppPage() {
             printReceipt(finalOrderData);
             resetEntireOrder();
         }).catch(err => alert('Erro: ' + err.message));
-    };
+    }
 
-    const printReceipt = (order) => {
+    function printReceipt(order) {
         const now = (order.timestamp && order.timestamp.toDate) ? order.timestamp.toDate() : new Date();
         const hora = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
         const orderNumber = (order.id || Date.now().toString()).slice(-6);
@@ -313,9 +281,9 @@ function initAppPage() {
         `;
         document.getElementById('recibo-container').innerHTML = reciboHTML;
         window.print();
-    };
+    }
 
-    const renderOrders = () => {
+    function renderOrders() {
         ordersList.innerHTML = '';
         const searchTerm = searchInput.value.toLowerCase();
 
@@ -352,9 +320,9 @@ function initAppPage() {
                 ordersList.appendChild(card);
             });
         }
-    };
+    }
 
-    const editOrder = (orderId) => {
+    function editOrder(orderId) {
         const orderToEdit = displayedOrders.find(order => order.id === orderId);
         if(!orderToEdit) return;
 
@@ -368,19 +336,18 @@ function initAppPage() {
         updateOrderSummary();
         savePrintBtn.innerHTML = '<i class="fas fa-edit"></i> Atualizar Pedido';
         newOrderBtn.classList.remove('hidden');
-    };
+    }
 
-    const deleteAllOrders = () => {
-        if (!confirm('ATENÇÃO MÁXIMA:\nEsta ação vai APAGAR PERMANENTEMENTE TODOS OS PEDIDOS (prontos e em preparo) do banco de dados.\n\nEsta ação é irreversível e visa economizar espaço no Firebase. Deseja continuar?')) return;
+    function deleteAllOrders() {
+        if (!confirm('ATENÇÃO MÁXIMA:\nEsta ação vai APAGAR PERMANENTEMENTE TODOS OS PEDIDOS (prontos e em preparo) do banco de dados.\n\nEsta ação é irreversível. Deseja continuar?')) return;
         
-        let deletedCount = 0; // Variável para a contagem
-
+        let deletedCount = 0;
         db.collection('pedidos').get().then(snapshot => {
             if (snapshot.empty) {
                 alert("Não há nenhum pedido no banco de dados para excluir.");
                 return;
             }
-            deletedCount = snapshot.size; // Guarda o número antes de deletar
+            deletedCount = snapshot.size;
             const batch = db.batch();
             snapshot.docs.forEach(doc => {
                 batch.delete(doc.ref);
@@ -392,27 +359,22 @@ function initAppPage() {
             }
         }).catch(err => {
             console.error("Erro ao excluir todos os pedidos:", err);
-            alert("ERRO: Não foi possível excluir os pedidos. Verifique o console para mais detalhes.");
+            alert("ERRO: Não foi possível excluir os pedidos.");
         });
-    };
+    }
     
     function listenToOrders() {
         if (unsubscribeOrders) unsubscribeOrders();
-
         const startOfDay = new Date();
         startOfDay.setHours(0, 0, 0, 0);
-
-        const q = db.collection('pedidos')
-            .where('timestamp', '>=', startOfDay)
-            .orderBy('timestamp', 'desc');
-
+        const q = db.collection('pedidos').where('timestamp', '>=', startOfDay).orderBy('timestamp', 'desc');
         unsubscribeOrders = q.onSnapshot(snapshot => {
             displayedOrders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             renderOrders();
         }, err => {
             console.error("Erro ao ouvir pedidos:", err);
             if (err.message.includes("requires an index")) {
-                alert("ERRO: Não foi possível carregar os pedidos. É necessário criar um índice no Firebase. Verifique o console para um link ou crie manualmente: coleção 'pedidos', campo 'timestamp' em ordem 'Decrescente'.");
+                alert("ERRO: É necessário criar um índice no Firebase. Verifique o console para um link.");
             }
         });
     }
@@ -436,47 +398,36 @@ function initAppPage() {
         ordersList.addEventListener('click', e => {
             const target = e.target.closest('button');
             if(!target) return;
-            
             const action = target.dataset.action;
             const card = target.closest('.order-item-card');
             if (!card) return;
             const orderId = card.dataset.id;
-            
-            if (!orderId) {
-                console.error("Não foi possível encontrar o ID do pedido no card.");
-                return;
-            }
-            
+            if (!orderId) return;
             const orderData = displayedOrders.find(o => o.id === orderId);
 
-            if (action === 'complete') {
-                db.collection('pedidos').doc(orderId).update({ status: 'pronto' }).catch(err => console.error("Erro ao completar:", err));
-            } else if (action === 'reopen') {
-                db.collection('pedidos').doc(orderId).update({ status: 'em preparo' }).catch(err => console.error("Erro ao reabrir:", err));
-            } else if (action === 'reprint') {
-                if(orderData) printReceipt(orderData);
-            } else if (action === 'delete') {
-                if (confirm(`ATENÇÃO:\nEsta ação vai APAGAR PERMANENTEMENTE o pedido de ${orderData?.cliente || 'desconhecido'}.\n\nDeseja continuar?`)) {
-                    db.collection('pedidos').doc(orderId).delete().catch(err => console.error("Erro ao deletar:", err));
+            if (action === 'complete') { db.collection('pedidos').doc(orderId).update({ status: 'pronto' }); } 
+            else if (action === 'reopen') { db.collection('pedidos').doc(orderId).update({ status: 'em preparo' }); } 
+            else if (action === 'reprint') { if(orderData) printReceipt(orderData); } 
+            else if (action === 'delete') {
+                if (confirm(`ATENÇÃO:\nVai APAGAR PERMANENTEMENTE o pedido de ${orderData?.cliente}.\n\nDeseja continuar?`)) {
+                    db.collection('pedidos').doc(orderId).delete();
                 }
             } else if (action === 'edit') {
                 editOrder(orderId);
+                if(window.innerWidth <= 1024) {
+                    appContainer.classList.add('view-main');
+                }
             }
         });
         
         menuContent.addEventListener('change', e => {
-            if (e.target.name === 'main-dish') {
-                document.querySelectorAll('.sides-container').forEach(c => {
-                    c.innerHTML = '';
-                    c.classList.add('hidden');
-                });
+             if (e.target.name === 'main-dish') {
+                document.querySelectorAll('.sides-container').forEach(c => { c.innerHTML = ''; c.classList.add('hidden'); });
                 const groupIndex = e.target.dataset.groupIndex;
                 const sidesContainer = document.getElementById(`sides-group-${groupIndex}`);
-                if (menuData[groupIndex] && menuData[groupIndex].sides) {
+                if (menuData[groupIndex] && menuData[groupIndex].sides.length > 0) {
                     sidesContainer.innerHTML = menuData[groupIndex].sides.map(s => `<label class="side-checkbox"><input type="checkbox" name="side" value="${s}">${s}</label>`).join('');
-                    if (menuData[groupIndex].sides.length > 0) {
-                        sidesContainer.classList.remove('hidden');
-                    }
+                    sidesContainer.classList.remove('hidden');
                 }
             }
         });
@@ -485,7 +436,6 @@ function initAppPage() {
             const selectedDishRadio = document.querySelector('input[name="main-dish"]:checked');
             if (!selectedDishRadio) return alert('Selecione um prato para adicionar.');
             const groupIndex = selectedDishRadio.dataset.groupIndex;
-
             currentOrderItems.push({
                 dish: selectedDishRadio.value,
                 sides: Array.from(document.querySelectorAll(`#sides-group-${groupIndex} input[name="side"]:checked`)).map(cb => cb.value)
@@ -499,9 +449,7 @@ function initAppPage() {
             if (!target) return;
             const index = parseInt(target.dataset.index);
 
-            if (target.classList.contains('delete-item-btn')) {
-                currentOrderItems.splice(index, 1);
-            }
+            if (target.classList.contains('delete-item-btn')) { currentOrderItems.splice(index, 1); }
             if (target.classList.contains('dupe-item-btn')) {
                 const itemCopy = JSON.parse(JSON.stringify(currentOrderItems[index]));
                 currentOrderItems.splice(index + 1, 0, itemCopy);
@@ -521,6 +469,14 @@ function initAppPage() {
                 }
             }
             updateOrderSummary();
+        });
+
+        mobileFab.addEventListener('click', () => {
+            appContainer.classList.add('view-main');
+        });
+
+        mobileBackBtn.addEventListener('click', () => {
+            appContainer.classList.remove('view-main');
         });
     }
 }
