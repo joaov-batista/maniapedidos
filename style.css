@@ -38,7 +38,7 @@ body {
 .auth-box button {
     width: 100%; padding: 1rem; margin-top: 1rem; background-color: var(--accent-color);
     color: white; border: none; border-radius: var(--border-radius); font-size: 1.1rem;
-    font-weight: 600; cursor: pointer; transition: background-color 0.3s;
+    font-weight: 600; cursor: pointer; transition: background-color: 0.3s;
 }
 .auth-box button:hover { background-color: #7b2cf1; }
 .auth-toggle { margin-top: 1.5rem; }
@@ -203,7 +203,7 @@ body {
 .mobile-only { display: none !important; }
 
 /* MODAL DE VISUALIZAÇÃO */
-.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); display: flex; justify-content: center; align-items: center; z-index: 2000; transition: opacity 0.2s ease; }
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); display: flex; justify-content: center; align-items: center; z-index: 2000; transition: opacity: 0.2s ease; }
 .modal-content { background: var(--bg-color); padding: 2rem; border-radius: var(--border-radius); border-top: 4px solid var(--accent-color); width: 90%; max-width: 500px; box-shadow: var(--shadow); transform: scale(0.95); transition: transform 0.2s ease; max-height: 90vh; display: flex; flex-direction: column; }
 .modal-overlay:not(.hidden) .modal-content { transform: scale(1); }
 .modal-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 1rem; margin-bottom: 1rem; border-bottom: 1px solid var(--primary-color); }
@@ -238,7 +238,7 @@ body {
         margin: 0; padding: 0;
     }
     @page { 
-        margin: 10mm;
+        margin: 0mm; /* <<<<<<< CORREÇÃO: margem 0 para comandas */
     }
 
     /* Estilo de Impressão: Comanda/Recibo */
@@ -248,6 +248,10 @@ body {
         font-size: 10pt;
         color: #000;
         text-align: center;
+        /* <<<<<<< CORREÇÃO: Adicionando estas linhas para isolar o elemento */
+        position: absolute;
+        top: 0;
+        left: 0;
     }
     #recibo-container:not(.report-mode) .recibo-header h1 { font-size: 14pt; margin: 0 0 5px 0; font-weight: bold; }
     #recibo-container:not(.report-mode) .recibo-info { font-size: 9pt; margin: 5px 0; }
@@ -261,6 +265,7 @@ body {
     /* Estilo de Impressão: Cardápio do Dia */
     #printable-menu {
         font-family: 'Inter', sans-serif; color: #000;
+        @page { margin: 10mm; } /* Margem específica para o cardápio */
     }
     #printable-menu h1 { font-size: 22pt; text-align: center; margin-bottom: 5px; }
     #printable-menu > p { font-size: 12pt; text-align: center; margin-bottom: 15px; }
@@ -278,6 +283,8 @@ body {
         font-size: 10pt;
         color: #000;
         text-align: left;
+        position: static; /* <<<<<<< Garante que o relatório use o fluxo normal */
+        @page { margin: 10mm; } /* Margem específica para o relatório */
     }
     .report-header { text-align: center; margin-bottom: 20px; }
     .report-header h1 { font-size: 18pt; margin-bottom: 5px; }
