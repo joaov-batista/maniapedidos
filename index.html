@@ -34,25 +34,31 @@
         <aside class="sidebar">
             <div class="sidebar-header">
                 <h2><i class="fas fa-tasks"></i> Fila de Pedidos</h2>
-                <button id="deleteAllOrdersBtn" class="btn-danger btn-small" title="Excluir todos os pedidos do dia"><i class="fas fa-trash"></i> Limpar Dia</button>
+                <div class="header-right-controls">
+                    <button id="printReportBtn" class="btn-secondary btn-small" title="Imprimir relação geral do dia"><i class="fas fa-file-alt"></i> Relatório</button>
+                    <button id="deleteAllOrdersBtn" class="btn-danger btn-small" title="Excluir todos os pedidos do dia"><i class="fas fa-trash"></i> Limpar Dia</button>
+                </div>
             </div>
             <div class="order-controls">
+                <div class="total-orders-display">
+                    Pedidos Totais do Dia: <span id="total-orders-count">0</span>
+                </div>
                 <div class="order-filters">
-                    <button class="filter-btn active" data-status="pendente">Pendente</button>
-                    <button class="filter-btn" data-status="em preparo">Em Preparo</button>
-                    <button class="filter-btn" data-status="pronto">Prontos</button>
-                    <button class="filter-btn" data-status="cancelado">Cancelados</button>
+                    <button class="filter-btn active" data-status="pendente">Pendente <span class="order-count" id="count-pendente">0</span></button>
+                    <button class="filter-btn" data-status="em preparo">Em Preparo <span class="order-count" id="count-em-preparo">0</span></button>
+                    <button class="filter-btn" data-status="pronto">Prontos <span class="order-count" id="count-pronto">0</span></button>
+                    <button class="filter-btn" data-status="cancelado">Cancelados <span class="order-count" id="count-cancelado">0</span></button>
                 </div>
                 <div class="order-filters type-filters">
-                    <button class="filter-btn active" data-type="todos">Todos</button>
-                    <button class="filter-btn" data-type="Na Loja">Na Loja</button>
-                    <button class="filter-btn" data-type="Retirada">Retirada</button>
-                    <button class="filter-btn" data-type="Entrega">Entrega</button>
+                    <button class="filter-btn active" data-type="todos">Todos <span class="order-count" id="count-todos">0</span></button>
+                    <button class="filter-btn" data-type="Na Loja">Na Loja <span class="order-count" id="count-na-loja">0</span></button>
+                    <button class="filter-btn" data-type="Retirada">Retirada <span class="order-count" id="count-retirada">0</span></button>
+                    <button class="filter-btn" data-type="Entrega">Entrega <span class="order-count" id="count-entrega">0</span></button>
                 </div>
                 <div class="priority-filter-wrapper">
                     <button id="priority-toggle-btn" class="priority-toggle" title="Filtrar por prioridade">
-                       <i class="fas fa-star"></i>
-                       <span>Apenas Prioritários</span>
+                        <i class="fas fa-star"></i>
+                        <span>Apenas Prioritários</span>
                     </button>
                 </div>
                 <div class="search-wrapper">
