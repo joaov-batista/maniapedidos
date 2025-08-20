@@ -43,6 +43,7 @@ function initAdminPage() {
         const menuGroupsContainer = document.getElementById('menu-groups-container');
         const addGroupBtn = document.getElementById('add-group-btn');
         const saveMenuBtn = document.getElementById('save-menu-btn');
+        const printMenuBtn = document.getElementById('print-menu-btn');
 
         function createGroupUI(group = { name: '', dishes: '', sides: '' }) {
             const card = document.createElement('div');
@@ -102,8 +103,45 @@ function initAdminPage() {
             }
         }
 
+        function printMenu() {
+            const printableContainer = document.getElementById('printable-menu');
+            let menuHTML = `<h1>Cardápio do Dia - Mania Mix</h1>`;
+            menuHTML += `<p>Data: ${new Date().toLocaleDateString('pt-BR')}</p><hr class="print-hr">`;
+        
+            const groupCards = document.querySelectorAll('.menu-group-admin-card');
+            if (groupCards.length === 0 || !groupCards[0].querySelector('.group-name').value.trim()) {
+                alert('O cardápio está vazio. Adicione grupos e pratos antes de imprimir.');
+                return;
+            }
+        
+            groupCards.forEach(card => {
+                const name = card.querySelector('.group-name').value.trim();
+                const dishes = card.querySelector('.group-dishes').value.split('\n').map(d => d.trim()).filter(Boolean);
+                const sides = card.querySelector('.group-sides').value.split('\n').map(s => s.trim()).filter(Boolean);
+                
+                if (name && dishes.length > 0) {
+                    menuHTML += `<div class="print-group"><h2>${name}</h2>`;
+                    menuHTML += '<ul>';
+                    dishes.forEach(dish => { menuHTML += `<li>${dish}</li>`; });
+                    menuHTML += '</ul>';
+        
+                    if (sides.length > 0) {
+                        menuHTML += '<h3>Acompanhamentos Sugeridos:</h3><ul>';
+                        sides.forEach(side => { menuHTML += `<li>- ${side}</li>`; });
+                        menuHTML += '</ul>';
+                    }
+                    menuHTML += '</div>';
+                }
+            });
+        
+            printableContainer.innerHTML = menuHTML;
+            window.print();
+            printableContainer.innerHTML = '';
+        }
+
         addGroupBtn.addEventListener('click', () => createGroupUI());
         saveMenuBtn.addEventListener('click', saveMenuToFirebase);
+        printMenuBtn.addEventListener('click', printMenu);
         loadMenuFromFirebase();
     }
 }
@@ -130,6 +168,7 @@ function initAppPage() {
     const newOrderBtn = document.getElementById('new-order-btn');
     const addItemBtn = document.getElementById('add-item-btn');
     const deleteAllOrdersBtn = document.getElementById('deleteAllOrdersBtn');
+    const printReportBtn = document.getElementById('printReportBtn');
     const orderFilters = document.querySelector('.order-filters');
     const typeFilters = document.querySelector('.type-filters');
     const priorityToggleBtn = document.getElementById('priority-toggle-btn');
@@ -149,6 +188,7 @@ function initAppPage() {
     let currentTypeFilter = 'todos';
     let priorityFilterActive = false;
     let unsubscribeOrders;
+    let isAddingItem = false; // Flag para evitar cliques duplos
 
     // LÓGICA DE INICIALIZAÇÃO
     auth.onAuthStateChanged(async (user) => {
@@ -338,10 +378,7 @@ function initAppPage() {
         const filteredOrders = displayedOrders
             .filter(order => order.status === currentStatusFilter)
             .filter(order => currentTypeFilter === 'todos' || order.tipo === currentTypeFilter)
-            .filter(order => {
-                if (!priorityFilterActive) return true;
-                return order.prioridade === true;
-            })
+            .filter(order => !priorityFilterActive || order.prioridade)
             .filter(order => {
                 if (searchTerm === '') return true;
                 const orderId = (order.id || '').toString().slice(-6);
@@ -424,6 +461,33 @@ function initAppPage() {
             alert("ERRO: Não foi possível excluir os pedidos.");
         });
     }
+
+    function updateOrderCounts() {
+        const total = displayedOrders.length;
+        document.getElementById('total-orders-count').textContent = total;
+        document.getElementById('count-todos').textContent = total;
+
+        const statusCounts = { pendente: 0, 'em preparo': 0, pronto: 0, cancelado: 0 };
+        const typeCounts = { 'Na Loja': 0, 'Retirada': 0, 'Entrega': 0 };
+
+        displayedOrders.forEach(order => {
+            if (statusCounts.hasOwnProperty(order.status)) {
+                statusCounts[order.status]++;
+            }
+            if (typeCounts.hasOwnProperty(order.tipo)) {
+                typeCounts[order.tipo]++;
+            }
+        });
+
+        document.getElementById('count-pendente').textContent = statusCounts.pendente;
+        document.getElementById('count-em-preparo').textContent = statusCounts['em preparo'];
+        document.getElementById('count-pronto').textContent = statusCounts.pronto;
+        document.getElementById('count-cancelado').textContent = statusCounts.cancelado;
+
+        document.getElementById('count-na-loja').textContent = typeCounts['Na Loja'];
+        document.getElementById('count-retirada').textContent = typeCounts['Retirada'];
+        document.getElementById('count-entrega').textContent = typeCounts['Entrega'];
+    }
     
     function listenToOrders() {
         if (unsubscribeOrders) unsubscribeOrders();
@@ -432,6 +496,7 @@ function initAppPage() {
         const q = db.collection('pedidos').where('timestamp', '>=', startOfDay).orderBy('timestamp', 'desc');
         unsubscribeOrders = q.onSnapshot(snapshot => {
             displayedOrders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            updateOrderCounts();
             renderOrders();
         }, err => {
             console.error("Erro ao ouvir pedidos:", err);
@@ -461,12 +526,76 @@ function initAppPage() {
         `;
         viewOrderModal.classList.remove('hidden');
     }
+
+    function printDailyReport() {
+        const reciboContainer = document.getElementById('recibo-container');
+        if (displayedOrders.length === 0) {
+            alert("Não há pedidos para gerar um relatório.");
+            return;
+        }
+
+        const counts = {
+            total: displayedOrders.length,
+            pendente: displayedOrders.filter(o => o.status === 'pendente').length,
+            emPreparo: displayedOrders.filter(o => o.status === 'em preparo').length,
+            pronto: displayedOrders.filter(o => o.status === 'pronto').length,
+            cancelado: displayedOrders.filter(o => o.status === 'cancelado').length,
+        };
+
+        let reportHTML = `
+            <div class="report-header">
+                <h1>Relatório Geral de Pedidos</h1>
+                <p>Data: ${new Date().toLocaleDateString('pt-BR')}</p>
+            </div>
+            <div class="report-summary">
+                <h2>Resumo do Dia</h2>
+                <p><strong>Total de Pedidos:</strong> ${counts.total}</p>
+                <p><strong>Pendentes:</strong> ${counts.pendente}</p>
+                <p><strong>Em Preparo:</strong> ${counts.emPreparo}</p>
+                <p><strong>Prontos:</strong> ${counts.pronto}</p>
+                <p><strong>Cancelados:</strong> ${counts.cancelado}</p>
+            </div>
+            <div class="report-order-list">
+                <h2>Todos os Pedidos</h2>
+        `;
+        
+        const sortedOrders = [...displayedOrders].sort((a, b) => {
+            const timeA = a.timestamp?.toDate() || 0;
+            const timeB = b.timestamp?.toDate() || 0;
+            return timeA - timeB;
+        });
+
+        sortedOrders.forEach(order => {
+            const orderNumber = order.id.slice(-6);
+            const hora = order.timestamp?.toDate() ? order.timestamp.toDate().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/A';
+            reportHTML += `
+                <div class="report-order-item">
+                    <h4>Pedido #${orderNumber} - ${order.cliente} (${hora})</h4>
+                    <p><strong>Tipo:</strong> ${order.tipo} | <strong>Status:</strong> ${order.status.charAt(0).toUpperCase() + order.status.slice(1)}</p>
+                    <ul>
+                        ${order.items.map(item => `<li>${item.dish} ${item.sides.length > 0 ? `<i>(${item.sides.join(', ')})</i>` : ''}</li>`).join('')}
+                    </ul>
+                    ${order.extras ? `<p><strong>Extras:</strong> ${order.extras}</p>` : ''}
+                    ${order.cancelReason ? `<p><strong>Motivo Cancel.:</strong> ${order.cancelReason}</p>` : ''}
+                </div>
+            `;
+        });
+
+        reportHTML += `</div>`;
+        
+        reciboContainer.innerHTML = reportHTML;
+        reciboContainer.classList.add('report-mode');
+        window.print();
+        reciboContainer.innerHTML = '';
+        reciboContainer.classList.remove('report-mode');
+    }
     
     function setupAppEventListeners() {
         logoutBtn.addEventListener('click', () => auth.signOut());
         savePrintBtn.addEventListener('click', saveAndPrintOrder);
         newOrderBtn.addEventListener('click', resetEntireOrder);
         deleteAllOrdersBtn.addEventListener('click', deleteAllOrders);
+        printReportBtn.addEventListener('click', printDailyReport);
         searchInput.addEventListener('input', renderOrders);
         
         orderFilters.addEventListener('click', e => {
@@ -540,9 +669,18 @@ function initAppPage() {
             }
         });
 
+        // AQUI ESTÁ A CORREÇÃO DO BUG DO ALERTA
         addItemBtn.addEventListener('click', () => {
+            if (isAddingItem) return; // Se já estiver adicionando, ignora o clique
+
             const selectedDishRadio = document.querySelector('input[name="main-dish"]:checked');
-            if (!selectedDishRadio) return alert('Selecione um prato para adicionar.');
+            if (!selectedDishRadio) {
+                alert('Selecione um prato para adicionar.');
+                return;
+            }
+            
+            isAddingItem = true; // Ativa a flag para bloquear cliques rápidos
+
             const groupIndex = selectedDishRadio.dataset.groupIndex;
             currentOrderItems.push({
                 dish: selectedDishRadio.value,
@@ -550,6 +688,9 @@ function initAppPage() {
             });
             clearMenuSelection();
             updateOrderSummary();
+
+            // Libera o botão para um novo clique após 300ms
+            setTimeout(() => { isAddingItem = false; }, 300);
         });
 
         orderSummaryItems.addEventListener('click', e => {
