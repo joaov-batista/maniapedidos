@@ -17,15 +17,34 @@ const db = firebase.firestore();
 const auth = firebase.auth();
 const serverTimestamp = firebase.firestore.FieldValue.serverTimestamp;
 
+// --- NOVO: GESTOR DE AUTENTICAÇÃO CENTRALIZADO ---
+// Este código agora controla o que acontece com base no estado de login do usuário,
+// evitando que as páginas tentem carregar conteúdo antes de confirmar a autenticação.
 document.addEventListener('DOMContentLoaded', () => {
-    const path = window.location.pathname;
-    if (path.includes('cardapio.html')) {
-        initAdminPage();
-    } else if (path.includes('historico.html')) {
-        initHistoryPage();
-    } else {
-        initAppPage();
-    }
+    auth.onAuthStateChanged(user => {
+        const path = window.location.pathname;
+        const isLoginPage = !path.includes('cardapio.html') && !path.includes('historico.html');
+
+        if (user) {
+            // Se o usuário está logado, direcione para a página apropriada.
+            if (path.includes('cardapio.html')) {
+                initAdminPage();
+            } else if (path.includes('historico.html')) {
+                initHistoryPage();
+            } else {
+                initAppPage();
+            }
+        } else {
+            // Se não está logado, só permite que fique na página de login.
+            // Se tentar aceder a outra página, redireciona.
+            if (!isLoginPage) {
+                alert("Você precisa estar logado para aceder a esta página.");
+                window.location.href = 'index.html';
+            } else {
+                initAppPage(); // Inicia a página de login
+            }
+        }
+    });
 });
 
 
@@ -33,153 +52,151 @@ document.addEventListener('DOMContentLoaded', () => {
 // --- FUNÇÕES GLOBAIS / UTILITÁRIAS ---
 // =======================================================================================
 
-// --- MOVIDA --- Função de PDF movida para o escopo global para ser reutilizada por ambas as páginas
 function generateReportPdf(title, orders) {
-    const { jsPDF } = window.jspdf;
-    if (orders.length === 0) {
-        alert("Não há pedidos para gerar este relatório.");
-        return;
-    }
+    const { jsPDF } = window.jspdf;
+    if (orders.length === 0) {
+        alert("Não há pedidos para gerar este relatório.");
+        return;
+    }
 
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
 
-    const formatItems = (items) => {
-        if (!items || items.length === 0) return 'N/A';
-        return items.map(item => {
-            let itemStr = item.dish;
-            if (item.sides && item.sides.length > 0) {
-                const sidesStr = item.sides.map(side => `  - ${side}`).join('\n');
-                itemStr += `\n${sidesStr}`;
-            }
-            return itemStr;
-        }).join('\n\n');
-    };
+    const formatItems = (items) => {
+        if (!items || items.length === 0) return 'N/A';
+        return items.map(item => {
+            let itemStr = item.dish;
+            if (item.sides && item.sides.length > 0) {
+                const sidesStr = item.sides.map(side => `  - ${side}`).join('\n');
+                itemStr += `\n${sidesStr}`;
+            }
+            return itemStr;
+        }).join('\n\n');
+    };
 
-    doc.setFontSize(22);
-    doc.setFont(undefined, 'bold');
-    doc.text("Relatório de Performance - Mania Mix", pageWidth / 2, 20, { align: 'center' });
-    doc.setFontSize(12);
-    doc.setFont(undefined, 'normal');
-    doc.text(title, pageWidth / 2, 28, { align: 'center' });
-    doc.setFontSize(10);
-    doc.setTextColor(150);
-    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth / 2, 34, { align: 'center' });
+    doc.setFontSize(22);
+    doc.setFont(undefined, 'bold');
+    doc.text("Relatório de Performance - Mania Mix", pageWidth / 2, 20, { align: 'center' });
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'normal');
+    doc.text(title, pageWidth / 2, 28, { align: 'center' });
+    doc.setFontSize(10);
+    doc.setTextColor(150);
+    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth / 2, 34, { align: 'center' });
 
-    const finishedOrders = orders.filter(o => o.status === 'pronto' || o.status === 'cancelado');
-    const dishCount = {};
-    orders.filter(o => o.status === 'pronto').forEach(order => {
-        order.items.forEach(item => {
-            dishCount[item.dish] = (dishCount[item.dish] || 0) + 1;
-        });
-    });
-    const storeCount = { 'Loja 1': 0, 'Loja 2': 0 };
-    finishedOrders.forEach(order => {
-        if (order.loja === 2) storeCount['Loja 2']++;
-        else storeCount['Loja 1']++;
-    });
-    
-    const headStyles = { fillColor: [44, 14, 86], textColor: [255, 255, 255], fontStyle: 'bold' };
-    const summaryHeadStyles = { fillColor: [88, 28, 172], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 14 };
-    
-    const dishData = Object.entries(dishCount)
-        .sort((a, b) => b[1] - a[1])
-        .map(([dish, count]) => [dish, count]);
-    
-    doc.autoTable({
-        startY: 45,
-        head: [['Resumo de Pratos Vendidos (Prontos)']],
-        headStyles: summaryHeadStyles,
-        body: [],
-        theme: 'plain'
-    });
-    doc.autoTable({
-        startY: doc.autoTable.previous.finalY,
-        head: [['Prato', 'Quantidade']],
-        body: dishData.length > 0 ? dishData : [['Nenhum prato finalizado.', '']],
-        headStyles: headStyles,
-        theme: 'striped'
-    });
+    const finishedOrders = orders.filter(o => o.status === 'pronto' || o.status === 'cancelado');
+    const dishCount = {};
+    orders.filter(o => o.status === 'pronto').forEach(order => {
+        order.items.forEach(item => {
+            dishCount[item.dish] = (dishCount[item.dish] || 0) + 1;
+        });
+    });
+    const storeCount = { 'Loja 1': 0, 'Loja 2': 0 };
+    finishedOrders.forEach(order => {
+        if (order.loja === 2) storeCount['Loja 2']++;
+        else storeCount['Loja 1']++;
+    });
+    
+    const headStyles = { fillColor: [44, 14, 86], textColor: [255, 255, 255], fontStyle: 'bold' };
+    const summaryHeadStyles = { fillColor: [88, 28, 172], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 14 };
+    
+    const dishData = Object.entries(dishCount)
+        .sort((a, b) => b[1] - a[1])
+        .map(([dish, count]) => [dish, count]);
+    
+    doc.autoTable({
+        startY: 45,
+        head: [['Resumo de Pratos Vendidos (Prontos)']],
+        headStyles: summaryHeadStyles,
+        body: [],
+        theme: 'plain'
+    });
+    doc.autoTable({
+        startY: doc.autoTable.previous.finalY,
+        head: [['Prato', 'Quantidade']],
+        body: dishData.length > 0 ? dishData : [['Nenhum prato finalizado.', '']],
+        headStyles: headStyles,
+        theme: 'striped'
+    });
 
-    const storeData = Object.entries(storeCount).map(([store, count]) => [store, count]);
-    doc.autoTable({
-        startY: doc.autoTable.previous.finalY + 10,
-        head: [['Resumo por Loja (Prontos e Cancelados)']],
-        headStyles: summaryHeadStyles,
-        body: [],
-        theme: 'plain'
-    });
-    doc.autoTable({
-        startY: doc.autoTable.previous.finalY,
-        head: [['Loja', 'Total de Pedidos']],
-        body: storeData,
-        headStyles: headStyles,
-        theme: 'striped'
-    });
+    const storeData = Object.entries(storeCount).map(([store, count]) => [store, count]);
+    doc.autoTable({
+        startY: doc.autoTable.previous.finalY + 10,
+        head: [['Resumo por Loja (Prontos e Cancelados)']],
+        headStyles: summaryHeadStyles,
+        body: [],
+        theme: 'plain'
+    });
+    doc.autoTable({
+        startY: doc.autoTable.previous.finalY,
+        head: [['Loja', 'Total de Pedidos']],
+        body: storeData,
+        headStyles: headStyles,
+        theme: 'striped'
+    });
 
-    const readyOrders = orders
-        .filter(o => o.status === 'pronto')
-        .map(o => [
-            `#${o.id.slice(-6)}`, 
-            o.cliente, 
-            o.loja === 2 ? 'Loja 2' : 'Loja 1',
-            formatItems(o.items)
-        ]);
-    
-    doc.autoTable({
-        startY: doc.autoTable.previous.finalY + 10,
-        head: [['Pedidos Finalizados como "Prontos"']],
-        headStyles: { fillColor: [22, 160, 133], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 14 },
-        body: [],
-        theme: 'plain'
-    });
-    doc.autoTable({
-        startY: doc.autoTable.previous.finalY,
-        head: [['Nº Pedido', 'Cliente', 'Loja', 'Itens Pedidos']],
-        body: readyOrders.length > 0 ? readyOrders : [['Nenhum pedido finalizado.', '', '', '']],
-        headStyles: { fillColor: [26, 188, 156], textColor: [255, 255, 255] },
-        theme: 'grid',
-        columnStyles: { 3: { cellWidth: 'auto' } }
-    });
+    const readyOrders = orders
+        .filter(o => o.status === 'pronto')
+        .map(o => [
+            `#${o.id.slice(-6)}`, 
+            o.cliente, 
+            o.loja === 2 ? 'Loja 2' : 'Loja 1',
+            formatItems(o.items)
+        ]);
+    
+    doc.autoTable({
+        startY: doc.autoTable.previous.finalY + 10,
+        head: [['Pedidos Finalizados como "Prontos"']],
+        headStyles: { fillColor: [22, 160, 133], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 14 },
+        body: [],
+        theme: 'plain'
+    });
+    doc.autoTable({
+        startY: doc.autoTable.previous.finalY,
+        head: [['Nº Pedido', 'Cliente', 'Loja', 'Itens Pedidos']],
+        body: readyOrders.length > 0 ? readyOrders : [['Nenhum pedido finalizado.', '', '', '']],
+        headStyles: { fillColor: [26, 188, 156], textColor: [255, 255, 255] },
+        theme: 'grid',
+        columnStyles: { 3: { cellWidth: 'auto' } }
+    });
 
-    const cancelledOrders = orders
-        .filter(o => o.status === 'cancelado')
-        .map(o => [
-            `#${o.id.slice(-6)}`, 
-            o.cliente, 
-            formatItems(o.items),
-            o.cancelReason || 'N/A'
-        ]);
+    const cancelledOrders = orders
+        .filter(o => o.status === 'cancelado')
+        .map(o => [
+            `#${o.id.slice(-6)}`, 
+            o.cliente, 
+            formatItems(o.items),
+            o.cancelReason || 'N/A'
+        ]);
 
-    doc.autoTable({
-        startY: doc.autoTable.previous.finalY + 10,
-        head: [['Pedidos "Cancelados"']],
-        headStyles: { fillColor: [192, 57, 43], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 14 },
-        body: [],
-        theme: 'plain'
-    });
-    doc.autoTable({
-        startY: doc.autoTable.previous.finalY,
-        head: [['Nº Pedido', 'Cliente', 'Itens do Pedido', 'Motivo']],
-        body: cancelledOrders.length > 0 ? cancelledOrders : [['Nenhum pedido cancelado.', '', '', '']],
-        headStyles: { fillColor: [231, 76, 60], textColor: [255, 255, 255] },
-        theme: 'grid',
-        columnStyles: { 2: { cellWidth: 'auto' } }
-    });
+    doc.autoTable({
+        startY: doc.autoTable.previous.finalY + 10,
+        head: [['Pedidos "Cancelados"']],
+        headStyles: { fillColor: [192, 57, 43], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 14 },
+        body: [],
+        theme: 'plain'
+    });
+    doc.autoTable({
+        startY: doc.autoTable.previous.finalY,
+        head: [['Nº Pedido', 'Cliente', 'Itens do Pedido', 'Motivo']],
+        body: cancelledOrders.length > 0 ? cancelledOrders : [['Nenhum pedido cancelado.', '', '', '']],
+        headStyles: { fillColor: [231, 76, 60], textColor: [255, 255, 255] },
+        theme: 'grid',
+        columnStyles: { 2: { cellWidth: 'auto' } }
+    });
 
-    const pageCount = doc.internal.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-        doc.setPage(i);
-        doc.setFontSize(8);
-        doc.setTextColor(150);
-        doc.text('Página ' + String(i) + ' de ' + String(pageCount), doc.internal.pageSize.width - 20, 287);
-    }
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(150);
+        doc.text('Página ' + String(i) + ' de ' + String(pageCount), doc.internal.pageSize.width - 20, 287);
+    }
 
-    const fileName = `${title.toLowerCase().replace(/[\s/]/g, '_').replace(/[^\w-]/g, '')}.pdf`;
-    doc.save(fileName);
+    const fileName = `${title.toLowerCase().replace(/[\s/]/g, '_').replace(/[^\w-]/g, '')}.pdf`;
+    doc.save(fileName);
 }
 
-// Função genérica para exibir o modal, pode ser chamada de qualquer página
 function showOrderModal(order, modalDetailsElement, modalOverlayElement) {
     if (!order) return;
     let itemsHTML = order.items.map(item => `
@@ -203,125 +220,120 @@ function showOrderModal(order, modalDetailsElement, modalOverlayElement) {
     modalOverlayElement.classList.remove('hidden');
 }
 
-
 // ===================================================================
 // PÁGINA ADMIN (cardapio.html)
 // ===================================================================
 function initAdminPage() {
-    auth.onAuthStateChanged(user => {
-        if (user) {
-            loadPageContent();
-        } else {
-            alert("Você precisa estar logado para aceder a esta página.");
-            window.location.href = 'index.html';
+    const menuGroupsContainer = document.getElementById('menu-groups-container');
+    const addGroupBtn = document.getElementById('add-group-btn');
+    const saveMenuBtn = document.getElementById('save-menu-btn');
+    const printMenuBtn = document.getElementById('print-menu-btn');
+
+    function createGroupUI(group = { name: '', dishes: '', sides: '' }) {
+        const card = document.createElement('div');
+        card.className = 'menu-group-admin-card';
+        card.innerHTML = `
+            <button class="btn-danger btn-small delete-group-btn" title="Excluir este grupo"><i class="fas fa-trash"></i></button>
+            <input type="text" class="group-name" placeholder="Nome do Grupo (Ex: Pratos do Dia)" value="${group.name}">
+            <div>
+                <textarea class="group-dishes" placeholder="Pratos (um por linha)">${group.dishes}</textarea>
+                <textarea class="group-sides" placeholder="Acompanhamentos (um por linha)">${group.sides}</textarea>
+            </div>
+        `;
+        menuGroupsContainer.appendChild(card);
+    }
+
+    menuGroupsContainer.addEventListener('click', e => {
+        if (e.target.closest('.delete-group-btn')) {
+            if (confirm('Tem a certeza que deseja excluir este grupo de pratos?')) {
+                e.target.closest('.menu-group-admin-card').remove();
+            }
         }
     });
 
-    function loadPageContent() {
-        const menuGroupsContainer = document.getElementById('menu-groups-container');
-        const addGroupBtn = document.getElementById('add-group-btn');
-        const saveMenuBtn = document.getElementById('save-menu-btn');
-        const printMenuBtn = document.getElementById('print-menu-btn');
+    async function loadMenuFromFirebase() {
+        const docRef = db.collection('configuracao').doc('cardapio-do-dia');
+        const docSnap = await docRef.get();
+        if (docSnap.exists) {
+            menuGroupsContainer.innerHTML = '';
+            docSnap.data().menu.forEach(group => createGroupUI({
+                name: group.groupName,
+                dishes: group.dishes.join('\n'),
+                sides: group.sides.join('\n')
+            }));
+        } else {
+            createGroupUI();
+        }
+    }
 
-        function createGroupUI(group = { name: '', dishes: '', sides: '' }) {
-            const card = document.createElement('div');
-            card.className = 'menu-group-admin-card';
-            card.innerHTML = `
-                <button class="btn-danger btn-small delete-group-btn" title="Excluir este grupo"><i class="fas fa-trash"></i></button>
-                <input type="text" class="group-name" placeholder="Nome do Grupo (Ex: Pratos do Dia)" value="${group.name}">
-                <div>
-                    <textarea class="group-dishes" placeholder="Pratos (um por linha)">${group.dishes}</textarea>
-                    <textarea class="group-sides" placeholder="Acompanhamentos (um por linha)">${group.sides}</textarea>
-                </div>
-            `;
-            menuGroupsContainer.appendChild(card);
+    function saveMenuToFirebase() {
+        const groups = [];
+        document.querySelectorAll('.menu-group-admin-card').forEach(card => {
+            const name = card.querySelector('.group-name').value.trim();
+            const dishes = card.querySelector('.group-dishes').value.split('\n').map(d => d.trim()).filter(Boolean);
+            const sides = card.querySelector('.group-sides').value.split('\n').map(s => s.trim()).filter(Boolean);
+            if (name && dishes.length > 0) {
+                groups.push({ groupName: name, dishes, sides });
+            }
+        });
+        if (groups.length > 0) {
+            db.collection('configuracao').doc('cardapio-do-dia').set({ menu: groups })
+                .then(() => alert('Cardápio guardado com sucesso!'))
+                .catch(err => alert('Erro: ' + err.message));
+        } else {
+            db.collection('configuracao').doc('cardapio-do-dia').delete()
+                .then(() => alert('Nenhum grupo válido. Cardápio em branco guardado.'))
+                .catch(err => alert('Erro: ' + err.message));
+        }
+    }
+
+    function printMenu() {
+        if (document.body.classList.contains('is-printing')) return;
+
+        const printableContainer = document.getElementById('printable-menu');
+        let menuHTML = `<h1>Cardápio do Dia - Mania Mix</h1>`;
+        menuHTML += `<p>Data: ${new Date().toLocaleDateString('pt-BR')}</p>`;
+
+        const groupCards = document.querySelectorAll('.menu-group-admin-card');
+        if (groupCards.length === 0 || !groupCards[0].querySelector('.group-name').value.trim()) {
+            alert('O cardápio está vazio. Adicione grupos e pratos antes de imprimir.');
+            return;
         }
 
-        menuGroupsContainer.addEventListener('click', e => {
-            if (e.target.closest('.delete-group-btn')) {
-                if (confirm('Tem a certeza que deseja excluir este grupo de pratos?')) {
-                    e.target.closest('.menu-group-admin-card').remove();
+        groupCards.forEach(card => {
+            const name = card.querySelector('.group-name').value.trim();
+            const dishes = card.querySelector('.group-dishes').value.split('\n').map(d => d.trim()).filter(Boolean);
+            const sides = card.querySelector('.group-sides').value.split('\n').map(s => s.trim()).filter(Boolean);
+
+            if (name && dishes.length > 0) {
+                menuHTML += `<div class="print-group"><h2>${name}</h2>`;
+                menuHTML += '<ul>';
+                dishes.forEach(dish => { menuHTML += `<li>${dish}</li>`; });
+                menuHTML += '</ul>';
+
+                if (sides.length > 0) {
+                    menuHTML += '<h3>Acompanhamentos:</h3><ul>';
+                    sides.forEach(side => { menuHTML += `<li>- ${side}</li>`; });
+                    menuHTML += '</ul>';
                 }
+                menuHTML += '</div>';
             }
         });
 
-        async function loadMenuFromFirebase() {
-            const docRef = db.collection('configuracao').doc('cardapio-do-dia');
-            const docSnap = await docRef.get();
-            if (docSnap.exists) {
-                menuGroupsContainer.innerHTML = '';
-                docSnap.data().menu.forEach(group => createGroupUI({
-                    name: group.groupName,
-                    dishes: group.dishes.join('\n'),
-                    sides: group.sides.join('\n')
-                }));
-            } else {
-                createGroupUI();
-            }
-        }
-
-        function saveMenuToFirebase() {
-            const groups = [];
-            document.querySelectorAll('.menu-group-admin-card').forEach(card => {
-                const name = card.querySelector('.group-name').value.trim();
-                const dishes = card.querySelector('.group-dishes').value.split('\n').map(d => d.trim()).filter(Boolean);
-                const sides = card.querySelector('.group-sides').value.split('\n').map(s => s.trim()).filter(Boolean);
-                if (name && dishes.length > 0) {
-                    groups.push({ groupName: name, dishes, sides });
-                }
-            });
-            if (groups.length > 0) {
-                db.collection('configuracao').doc('cardapio-do-dia').set({ menu: groups })
-                    .then(() => alert('Cardápio guardado com sucesso!'))
-                    .catch(err => alert('Erro: ' + err.message));
-            } else {
-                db.collection('configuracao').doc('cardapio-do-dia').delete()
-                    .then(() => alert('Nenhum grupo válido. Cardápio em branco guardado.'))
-                    .catch(err => alert('Erro: ' + err.message));
-            }
-        }
-
-        function printMenu() {
-            const printableContainer = document.getElementById('printable-menu');
-            let menuHTML = `<h1>Cardápio do Dia - Mania Mix</h1>`;
-            menuHTML += `<p>Data: ${new Date().toLocaleDateString('pt-BR')}</p><hr class="print-hr">`;
-
-            const groupCards = document.querySelectorAll('.menu-group-admin-card');
-            if (groupCards.length === 0 || !groupCards[0].querySelector('.group-name').value.trim()) {
-                alert('O cardápio está vazio. Adicione grupos e pratos antes de imprimir.');
-                return;
-            }
-
-            groupCards.forEach(card => {
-                const name = card.querySelector('.group-name').value.trim();
-                const dishes = card.querySelector('.group-dishes').value.split('\n').map(d => d.trim()).filter(Boolean);
-                const sides = card.querySelector('.group-sides').value.split('\n').map(s => s.trim()).filter(Boolean);
-
-                if (name && dishes.length > 0) {
-                    menuHTML += `<div class="print-group"><h2>${name}</h2>`;
-                    menuHTML += '<ul>';
-                    dishes.forEach(dish => { menuHTML += `<li>${dish}</li>`; });
-                    menuHTML += '</ul>';
-
-                    if (sides.length > 0) {
-                        menuHTML += '<h3>Acompanhamentos Sugeridos:</h3><ul>';
-                        sides.forEach(side => { menuHTML += `<li>- ${side}</li>`; });
-                        menuHTML += '</ul>';
-                    }
-                    menuHTML += '</div>';
-                }
-            });
-
-            printableContainer.innerHTML = menuHTML;
-            window.print();
-            printableContainer.innerHTML = '';
-        }
-
-        addGroupBtn.addEventListener('click', () => createGroupUI());
-        saveMenuBtn.addEventListener('click', saveMenuToFirebase);
-        printMenuBtn.addEventListener('click', printMenu);
-        loadMenuFromFirebase();
+        printableContainer.innerHTML = menuHTML;
+        
+        document.body.classList.add('is-printing');
+        window.print();
+        setTimeout(() => {
+            document.body.classList.remove('is-printing');
+            printableContainer.innerHTML = ''; // Limpa após a impressão
+        }, 500);
     }
+
+    addGroupBtn.addEventListener('click', () => createGroupUI());
+    saveMenuBtn.addEventListener('click', saveMenuToFirebase);
+    printMenuBtn.addEventListener('click', printMenu);
+    loadMenuFromFirebase();
 }
 
 // ===================================================================
@@ -371,20 +383,18 @@ function initAppPage() {
     let unsubscribeOrders;
     let isAddingItem = false;
 
-    // LÓGICA DE INICIALIZAÇÃO
-    auth.onAuthStateChanged(async (user) => {
-        if (user) {
-            loginContainer.classList.add('hidden');
-            appContainer.classList.remove('hidden');
-            await loadMenu();
-            setupAppEventListeners();
-            listenToOrders();
-        } else {
-            loginContainer.classList.remove('hidden');
-            appContainer.classList.add('hidden');
-            if (unsubscribeOrders) unsubscribeOrders();
-        }
-    });
+    // LÓGICA DE EXIBIÇÃO (LOGADO VS DESLOGADO)
+    if (auth.currentUser) {
+        loginContainer.classList.add('hidden');
+        appContainer.classList.remove('hidden');
+        loadMenu();
+        setupAppEventListeners();
+        listenToOrders();
+    } else {
+        loginContainer.classList.remove('hidden');
+        appContainer.classList.add('hidden');
+        setupAuthEventListeners();
+    }
     
     function setupAuthEventListeners() {
         authToggleLink.addEventListener('click', e => {
@@ -419,7 +429,6 @@ function initAppPage() {
             });
         });
     }
-    setupAuthEventListeners();
 
     function resetEntireOrder() {
         currentOrderItems = [];
@@ -545,6 +554,8 @@ function initAppPage() {
     }
 
     function printReceipt(order, isEmployeeOrder) {
+        if (document.body.classList.contains('is-printing')) return;
+
         const now = (order.timestamp && order.timestamp.toDate) ? order.timestamp.toDate() : new Date();
         const hora = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
         const orderNumber = (order.id || Date.now().toString()).slice(-6);
@@ -578,7 +589,12 @@ function initAppPage() {
             ${order.endereco ? `<hr><div class="recibo-item"><p>ENDEREÇO:</p><ul><li>${order.endereco}</li></ul></div>` : ''}
         `;
         document.getElementById('recibo-container').innerHTML = reciboHTML;
+        
+        document.body.classList.add('is-printing');
         window.print();
+        setTimeout(() => {
+            document.body.classList.remove('is-printing');
+        }, 500);
     }
 
     function renderOrders() {
@@ -720,17 +736,6 @@ function initAppPage() {
             const weeklyOrders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             generateReportPdf(title, weeklyOrders);
             
-            if (new Date().getDay() === 0) {
-                 if (confirm('RELATÓRIO SEMANAL GERADO!\n\nHoje é domingo. Deseja APAGAR TODOS os pedidos da semana para iniciar uma nova? ESTA AÇÃO NÃO PODE SER DESFEITA.')) {
-                    const batch = db.batch();
-                    snapshot.docs.forEach(doc => {
-                        batch.delete(doc.ref);
-                    });
-                    await batch.commit();
-                    alert(`${snapshot.size} pedidos da semana foram apagados com sucesso!`);
-                }
-            }
-    
         } catch (error) {
             console.error("Erro ao gerar relatório semanal:", error);
             alert("Erro ao procurar dados para o relatório semanal. Verifique a consola.");
@@ -738,7 +743,10 @@ function initAppPage() {
     }
     
     function setupAppEventListeners() {
-        logoutBtn.addEventListener('click', () => auth.signOut());
+        logoutBtn.addEventListener('click', () => {
+            if (unsubscribeOrders) unsubscribeOrders();
+            auth.signOut();
+        });
         savePrintBtn.addEventListener('click', saveAndPrintOrder);
         employeePrintBtn.addEventListener('click', printEmployeeOrder);
         newOrderBtn.addEventListener('click', resetEntireOrder);
@@ -876,7 +884,6 @@ function initHistoryPage() {
     const modal = document.getElementById('view-order-modal');
     const modalDetails = document.getElementById('modal-order-details');
     const closeModalBtn = document.getElementById('close-modal-btn');
-    // --- NOVO --- Seletores para as novas funcionalidades
     const generateHistoryPdfBtn = document.getElementById('generate-history-pdf-btn');
     const clearWeekBtn = document.getElementById('clear-week-btn');
     const passwordModal = document.getElementById('password-modal');
@@ -886,16 +893,15 @@ function initHistoryPage() {
     
     let fetchedOrders = [];
     let currentStatusFilter = 'todos';
-    const CLEAR_WEEK_PASSWORD = "mania@2025"; // Senha de segurança
+    const CLEAR_WEEK_PASSWORD = "mania@2025";
 
-    // Define a data de hoje como padrão no seletor de data
     dateFilter.value = new Date().toISOString().split('T')[0];
 
     async function fetchAndRenderOrders() {
         const selectedDate = dateFilter.value;
         if (!selectedDate) {
             ordersList.innerHTML = '<p class="placeholder">Por favor, selecione uma data.</p>';
-            fetchedOrders = []; // Limpa os pedidos se a data for inválida
+            fetchedOrders = [];
             return;
         }
 
@@ -918,7 +924,7 @@ function initHistoryPage() {
             renderHistoricalOrders();
         } catch (error) {
             console.error("Erro ao procurar pedidos históricos:", error);
-            fetchedOrders = []; // Limpa os pedidos em caso de erro
+            fetchedOrders = [];
             ordersList.innerHTML = '<p class="placeholder">Ocorreu um erro ao procurar os pedidos. Tente novamente.</p>';
         }
     }
@@ -947,7 +953,6 @@ function initHistoryPage() {
         }).join('');
     }
 
-    // --- NOVO --- Função para lidar com a limpeza da semana
     async function handleClearWeek() {
         const enteredPassword = passwordInput.value;
         if (enteredPassword !== CLEAR_WEEK_PASSWORD) {
@@ -956,9 +961,9 @@ function initHistoryPage() {
             return;
         }
     
-        const selectedDate = new Date(dateFilter.value + 'T00:00:00'); // Garante que a data está correta
+        const selectedDate = new Date(dateFilter.value + 'T00:00:00');
         const dayOfWeek = selectedDate.getDay(); 
-        const diff = selectedDate.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Ajuste para domingo
+        const diff = selectedDate.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
         
         const monday = new Date(selectedDate.setDate(diff));
         monday.setHours(0, 0, 0, 0);
@@ -988,7 +993,6 @@ function initHistoryPage() {
                 return;
             }
     
-            // Usar Batch para apagar múltiplos documentos de forma eficiente
             const batch = db.batch();
             snapshot.docs.forEach(doc => {
                 batch.delete(doc.ref);
@@ -999,7 +1003,7 @@ function initHistoryPage() {
             
             passwordInput.value = '';
             passwordModal.classList.add('hidden');
-            fetchAndRenderOrders(); // Atualiza a visualização
+            fetchAndRenderOrders();
     
         } catch (error) {
             console.error("Erro ao limpar a semana:", error);
@@ -1007,8 +1011,6 @@ function initHistoryPage() {
         }
     }
 
-
-    // --- NOVO --- Event Listeners para as novas funcionalidades
     generateHistoryPdfBtn.addEventListener('click', () => {
         if (!dateFilter.value) {
             alert("Por favor, selecione uma data para gerar o relatório.");
@@ -1033,7 +1035,6 @@ function initHistoryPage() {
         if(e.target === passwordModal) passwordModal.classList.add('hidden');
     });
 
-    // Event Listeners existentes
     dateFilter.addEventListener('change', fetchAndRenderOrders);
 
     statusFilters.addEventListener('click', (e) => {
@@ -1051,7 +1052,6 @@ function initHistoryPage() {
         const orderId = card.dataset.id;
         const orderData = fetchedOrders.find(o => o.id === orderId);
         if (orderData) {
-            // Reutiliza a função showOrderModal, passando os elementos do modal da página de histórico
             showOrderModal(orderData, modalDetails, modal);
         }
     });
@@ -1063,6 +1063,5 @@ function initHistoryPage() {
         }
     });
 
-    // Carregar pedidos para a data de hoje ao iniciar
     fetchAndRenderOrders();
 }
