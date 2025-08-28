@@ -1,13 +1,13 @@
 // *******************************************************************
 // SUA CONFIGURAÇÃO DO FIREBASE
 const firebaseConfig = {
-    apiKey: "AIzaSyD27OhkX974CwCsZINmv4fXoY1-rjBvwvo",
-    authDomain: "pedidosmania-8e64d.firebaseapp.com",
-    projectId: "pedidosmania-8e64d",
-    storageBucket: "pedidosmania-8e64d.appspot.com",
-    messagingSenderId: "690030977902",
-    appId: "1:690030977902:web:aea37bdd2a8b25bfaad77f",
-    measurementId: "G-6J70HR8F9K"
+    apiKey: "AIzaSyD27OhkX974CwCsZINmv4fXoY1-rjBvwvo",
+    authDomain: "pedidosmania-8e64d.firebaseapp.com",
+    projectId: "pedidosmania-8e64d",
+    storageBucket: "pedidosmania-8e64d.appspot.com",
+    messagingSenderId: "690030977902",
+    appId: "1:690030977902:web:aea3Bdd2a8b25bfaad77f",
+    measurementId: "G-6J70HR8F9K"
 };
 // *******************************************************************
 
@@ -18,13 +18,191 @@ const auth = firebase.auth();
 const serverTimestamp = firebase.firestore.FieldValue.serverTimestamp;
 
 document.addEventListener('DOMContentLoaded', () => {
-    const path = window.location.pathname;
-    if (path.includes('cardapio.html')) {
-        initAdminPage();
-    } else {
-        initAppPage();
-    }
+    const path = window.location.pathname;
+    if (path.includes('cardapio.html')) {
+        initAdminPage();
+    } else if (path.includes('historico.html')) {
+        initHistoryPage();
+    } else {
+        initAppPage();
+    }
 });
+
+
+// =======================================================================================
+// --- FUNÇÕES GLOBAIS / UTILITÁRIAS ---
+// =======================================================================================
+
+// --- MOVIDA --- Função de PDF movida para o escopo global para ser reutilizada por ambas as páginas
+function generateReportPdf(title, orders) {
+    const { jsPDF } = window.jspdf;
+    if (orders.length === 0) {
+        alert("Não há pedidos para gerar este relatório.");
+        return;
+    }
+
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    const formatItems = (items) => {
+        if (!items || items.length === 0) return 'N/A';
+        return items.map(item => {
+            let itemStr = item.dish;
+            if (item.sides && item.sides.length > 0) {
+                const sidesStr = item.sides.map(side => `  - ${side}`).join('\n');
+                itemStr += `\n${sidesStr}`;
+            }
+            return itemStr;
+        }).join('\n\n');
+    };
+
+    doc.setFontSize(22);
+    doc.setFont(undefined, 'bold');
+    doc.text("Relatório de Performance - Mania Mix", pageWidth / 2, 20, { align: 'center' });
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'normal');
+    doc.text(title, pageWidth / 2, 28, { align: 'center' });
+    doc.setFontSize(10);
+    doc.setTextColor(150);
+    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth / 2, 34, { align: 'center' });
+
+    const finishedOrders = orders.filter(o => o.status === 'pronto' || o.status === 'cancelado');
+    const dishCount = {};
+    orders.filter(o => o.status === 'pronto').forEach(order => {
+        order.items.forEach(item => {
+            dishCount[item.dish] = (dishCount[item.dish] || 0) + 1;
+        });
+    });
+    const storeCount = { 'Loja 1': 0, 'Loja 2': 0 };
+    finishedOrders.forEach(order => {
+        if (order.loja === 2) storeCount['Loja 2']++;
+        else storeCount['Loja 1']++;
+    });
+    
+    const headStyles = { fillColor: [44, 14, 86], textColor: [255, 255, 255], fontStyle: 'bold' };
+    const summaryHeadStyles = { fillColor: [88, 28, 172], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 14 };
+    
+    const dishData = Object.entries(dishCount)
+        .sort((a, b) => b[1] - a[1])
+        .map(([dish, count]) => [dish, count]);
+    
+    doc.autoTable({
+        startY: 45,
+        head: [['Resumo de Pratos Vendidos (Prontos)']],
+        headStyles: summaryHeadStyles,
+        body: [],
+        theme: 'plain'
+    });
+    doc.autoTable({
+        startY: doc.autoTable.previous.finalY,
+        head: [['Prato', 'Quantidade']],
+        body: dishData.length > 0 ? dishData : [['Nenhum prato finalizado.', '']],
+        headStyles: headStyles,
+        theme: 'striped'
+    });
+
+    const storeData = Object.entries(storeCount).map(([store, count]) => [store, count]);
+    doc.autoTable({
+        startY: doc.autoTable.previous.finalY + 10,
+        head: [['Resumo por Loja (Prontos e Cancelados)']],
+        headStyles: summaryHeadStyles,
+        body: [],
+        theme: 'plain'
+    });
+    doc.autoTable({
+        startY: doc.autoTable.previous.finalY,
+        head: [['Loja', 'Total de Pedidos']],
+        body: storeData,
+        headStyles: headStyles,
+        theme: 'striped'
+    });
+
+    const readyOrders = orders
+        .filter(o => o.status === 'pronto')
+        .map(o => [
+            `#${o.id.slice(-6)}`, 
+            o.cliente, 
+            o.loja === 2 ? 'Loja 2' : 'Loja 1',
+            formatItems(o.items)
+        ]);
+    
+    doc.autoTable({
+        startY: doc.autoTable.previous.finalY + 10,
+        head: [['Pedidos Finalizados como "Prontos"']],
+        headStyles: { fillColor: [22, 160, 133], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 14 },
+        body: [],
+        theme: 'plain'
+    });
+    doc.autoTable({
+        startY: doc.autoTable.previous.finalY,
+        head: [['Nº Pedido', 'Cliente', 'Loja', 'Itens Pedidos']],
+        body: readyOrders.length > 0 ? readyOrders : [['Nenhum pedido finalizado.', '', '', '']],
+        headStyles: { fillColor: [26, 188, 156], textColor: [255, 255, 255] },
+        theme: 'grid',
+        columnStyles: { 3: { cellWidth: 'auto' } }
+    });
+
+    const cancelledOrders = orders
+        .filter(o => o.status === 'cancelado')
+        .map(o => [
+            `#${o.id.slice(-6)}`, 
+            o.cliente, 
+            formatItems(o.items),
+            o.cancelReason || 'N/A'
+        ]);
+
+    doc.autoTable({
+        startY: doc.autoTable.previous.finalY + 10,
+        head: [['Pedidos "Cancelados"']],
+        headStyles: { fillColor: [192, 57, 43], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 14 },
+        body: [],
+        theme: 'plain'
+    });
+    doc.autoTable({
+        startY: doc.autoTable.previous.finalY,
+        head: [['Nº Pedido', 'Cliente', 'Itens do Pedido', 'Motivo']],
+        body: cancelledOrders.length > 0 ? cancelledOrders : [['Nenhum pedido cancelado.', '', '', '']],
+        headStyles: { fillColor: [231, 76, 60], textColor: [255, 255, 255] },
+        theme: 'grid',
+        columnStyles: { 2: { cellWidth: 'auto' } }
+    });
+
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(150);
+        doc.text('Página ' + String(i) + ' de ' + String(pageCount), doc.internal.pageSize.width - 20, 287);
+    }
+
+    const fileName = `${title.toLowerCase().replace(/[\s/]/g, '_').replace(/[^\w-]/g, '')}.pdf`;
+    doc.save(fileName);
+}
+
+// Função genérica para exibir o modal, pode ser chamada de qualquer página
+function showOrderModal(order, modalDetailsElement, modalOverlayElement) {
+    if (!order) return;
+    let itemsHTML = order.items.map(item => `
+        <div class="modal-item">
+            <strong>- ${item.dish}</strong>
+            ${item.sides.length > 0 ? `<ul>${item.sides.map(s => `<li>${s}</li>`).join('')}</ul>` : ''}
+        </div>
+    `).join('');
+    const clientName = order.loja === 2 ? `${order.cliente} - Loja 2` : order.cliente;
+    
+    modalDetailsElement.innerHTML = `
+        <p><strong>Cliente:</strong> ${clientName}</p>
+        <p><strong>Tipo:</strong> ${order.tipo}</p>
+        <p><strong>Status:</strong> ${order.status}</p>
+        <p><strong>Prioridade:</strong> ${order.prioridade ? 'Sim' : 'Não'}</p>
+        ${order.endereco ? `<p><strong>Endereço:</strong> ${order.endereco}</p>` : ''}
+        ${order.extras ? `<p><strong>Extras:</strong> ${order.extras}</p>` : ''}
+        ${order.status === 'cancelado' && order.cancelReason ? `<p><strong>Motivo do Cancelamento:</strong> ${order.cancelReason}</p>` : ''}
+        <div class="modal-items-list">${itemsHTML}</div>
+    `;
+    modalOverlayElement.classList.remove('hidden');
+}
+
 
 // ===================================================================
 // PÁGINA ADMIN (cardapio.html)
@@ -34,7 +212,7 @@ function initAdminPage() {
         if (user) {
             loadPageContent();
         } else {
-            alert("Você precisa estar logado para acessar esta página.");
+            alert("Você precisa estar logado para aceder a esta página.");
             window.location.href = 'index.html';
         }
     });
@@ -61,7 +239,7 @@ function initAdminPage() {
 
         menuGroupsContainer.addEventListener('click', e => {
             if (e.target.closest('.delete-group-btn')) {
-                if (confirm('Tem certeza que deseja excluir este grupo de pratos?')) {
+                if (confirm('Tem a certeza que deseja excluir este grupo de pratos?')) {
                     e.target.closest('.menu-group-admin-card').remove();
                 }
             }
@@ -94,11 +272,11 @@ function initAdminPage() {
             });
             if (groups.length > 0) {
                 db.collection('configuracao').doc('cardapio-do-dia').set({ menu: groups })
-                    .then(() => alert('Cardápio salvo com sucesso!'))
+                    .then(() => alert('Cardápio guardado com sucesso!'))
                     .catch(err => alert('Erro: ' + err.message));
             } else {
                 db.collection('configuracao').doc('cardapio-do-dia').delete()
-                    .then(() => alert('Nenhum grupo válido. Cardápio em branco salvo.'))
+                    .then(() => alert('Nenhum grupo válido. Cardápio em branco guardado.'))
                     .catch(err => alert('Erro: ' + err.message));
             }
         }
@@ -216,9 +394,9 @@ function initAppPage() {
             const authTitle = document.getElementById('auth-title');
             const authSubtitle = document.getElementById('auth-subtitle');
             const isLogin = !loginForm.classList.contains('hidden');
-            authTitle.innerText = isLogin ? 'Pedidos Mania Mix' : 'Crie sua Conta';
-            authSubtitle.innerText = isLogin ? 'Acesse sua conta para iniciar' : 'É rápido e fácil.';
-            authToggleLink.innerText = isLogin ? 'Não tem uma conta? Cadastre-se' : 'Já tem uma conta? Faça Login';
+            authTitle.innerText = isLogin ? 'Pedidos Mania Mix' : 'Crie a sua Conta';
+            authSubtitle.innerText = isLogin ? 'Aceda à sua conta para iniciar' : 'É rápido e fácil.';
+            authToggleLink.innerText = isLogin ? 'Não tem uma conta? Registe-se' : 'Já tem uma conta? Inicie Sessão';
         });
         loginForm.addEventListener('submit', e => {
             e.preventDefault();
@@ -232,11 +410,11 @@ function initAppPage() {
             const password = registerForm['register-password'].value;
             auth.createUserWithEmailAndPassword(email, password).catch(err => {
                 if (err.code == 'auth/weak-password') {
-                    alert('Senha muito fraca. A senha deve ter no mínimo 6 caracteres.');
+                    alert('Palavra-passe muito fraca. A palavra-passe deve ter no mínimo 6 caracteres.');
                 } else if (err.code == 'auth/email-already-in-use') {
-                    alert('Este e-mail já está cadastrado.');
+                    alert('Este e-mail já está registado.');
                 } else {
-                    alert('Erro ao cadastrar: ' + err.message);
+                    alert('Erro ao registar: ' + err.message);
                 }
             });
         });
@@ -254,7 +432,7 @@ function initAppPage() {
         document.querySelector('#retirada').checked = true;
         addressSection.classList.add('hidden');
         document.querySelectorAll('.order-item-card.editing').forEach(c => c.classList.remove('editing'));
-        savePrintBtn.innerHTML = '<i class="fas fa-save"></i> Salvar e Imprimir';
+        savePrintBtn.innerHTML = '<i class="fas fa-save"></i> Guardar e Imprimir';
         newOrderBtn.classList.add('hidden');
         clearMenuSelection();
         updateOrderSummary();
@@ -295,7 +473,7 @@ function initAppPage() {
                 menuData = docSnap.data().menu;
                 renderMenu(menuData);
             } else {
-                menuContent.innerHTML = '<h3>👋 Cardápio do dia não cadastrado.</h3>';
+                menuContent.innerHTML = '<h3>👋 Cardápio do dia não registado.</h3>';
             }
         } catch (error) {
             console.error("Erro ao carregar o cardápio:", error);
@@ -355,7 +533,7 @@ function initAppPage() {
             const finalOrderData = { id: orderId || docRef.id, ...orderData };
             printReceipt(finalOrderData, false);
             resetEntireOrder();
-        }).catch(err => alert('Erro ao salvar pedido: ' + err.message));
+        }).catch(err => alert('Erro ao guardar pedido: ' + err.message));
     }
     
     function printEmployeeOrder() {
@@ -510,190 +688,9 @@ function initAppPage() {
         }, err => {
             console.error("Erro ao ouvir pedidos:", err);
             if (err.code === 'failed-precondition' && err.message.includes("index")) {
-                 alert("ERRO DE BANCO DE DADOS: É necessário criar um índice no Firebase. Verifique o link no console de logs (F12) e crie o índice composto solicitado.");
+                 alert("ERRO DE BANCO DE DADOS: É necessário criar um índice no Firebase. Verifique o link na consola de logs (F12) e crie o índice composto solicitado.");
             }
         });
-    }
-
-    function showOrderModal(order) {
-        if (!order) return;
-        let itemsHTML = order.items.map(item => `
-            <div class="modal-item">
-                <strong>- ${item.dish}</strong>
-                ${item.sides.length > 0 ? `<ul>${item.sides.map(s => `<li>${s}</li>`).join('')}</ul>` : ''}
-            </div>
-        `).join('');
-        const clientName = order.loja === 2 ? `${order.cliente} - Loja 2` : order.cliente;
-        modalOrderDetails.innerHTML = `
-            <p><strong>Cliente:</strong> ${clientName}</p>
-            <p><strong>Tipo:</strong> ${order.tipo}</p>
-            <p><strong>Status:</strong> ${order.status}</p>
-            <p><strong>Prioridade:</strong> ${order.prioridade ? 'Sim' : 'Não'}</p>
-            ${order.endereco ? `<p><strong>Endereço:</strong> ${order.endereco}</p>` : ''}
-            ${order.extras ? `<p><strong>Extras:</strong> ${order.extras}</p>` : ''}
-            ${order.status === 'cancelado' && order.cancelReason ? `<p><strong>Motivo do Cancelamento:</strong> ${order.cancelReason}</p>` : ''}
-            <div class="modal-items-list">${itemsHTML}</div>
-        `;
-        viewOrderModal.classList.remove('hidden');
-    }
-
-    // =======================================================================================
-    // FUNÇÃO DE GERAR PDF TOTALMENTE REFEITA PARA MAIOR CLAREZA E PROFISSIONALISMO
-    // =======================================================================================
-    function generateReportPdf(title, orders) {
-        const { jsPDF } = window.jspdf;
-        if (orders.length === 0) {
-            alert("Não há pedidos para gerar este relatório.");
-            return;
-        }
-    
-        const doc = new jsPDF();
-        const pageWidth = doc.internal.pageSize.getWidth();
-
-        // Helper para formatar os itens de um pedido em uma única string com quebras de linha
-        const formatItems = (items) => {
-            if (!items || items.length === 0) return 'N/A';
-            return items.map(item => {
-                let itemStr = item.dish; // O prato principal
-                if (item.sides && item.sides.length > 0) {
-                    // Adiciona cada acompanhamento em uma nova linha, indentado
-                    const sidesStr = item.sides.map(side => `  - ${side}`).join('\n');
-                    itemStr += `\n${sidesStr}`;
-                }
-                return itemStr;
-            }).join('\n\n'); // Separa múltiplos itens no mesmo pedido com duas quebras de linha
-        };
-    
-        // --- Cabeçalho ---
-        doc.setFontSize(22);
-        doc.setFont(undefined, 'bold');
-        doc.text("Relatório de Performance - Mania Mix", pageWidth / 2, 20, { align: 'center' });
-        doc.setFontSize(12);
-        doc.setFont(undefined, 'normal');
-        doc.text(title, pageWidth / 2, 28, { align: 'center' });
-        doc.setFontSize(10);
-        doc.setTextColor(150);
-        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth / 2, 34, { align: 'center' });
-    
-        // --- Processamento de Dados ---
-        const finishedOrders = orders.filter(o => o.status === 'pronto' || o.status === 'cancelado');
-        const dishCount = {};
-        orders.filter(o => o.status === 'pronto').forEach(order => {
-            order.items.forEach(item => {
-                dishCount[item.dish] = (dishCount[item.dish] || 0) + 1;
-            });
-        });
-        const storeCount = { 'Loja 1': 0, 'Loja 2': 0 };
-        finishedOrders.forEach(order => {
-            if (order.loja === 2) storeCount['Loja 2']++;
-            else storeCount['Loja 1']++;
-        });
-    
-        // --- Tabelas com AutoTable ---
-        const headStyles = { fillColor: [44, 14, 86], textColor: 255, fontStyle: 'bold' };
-        const summaryHeadStyles = { fillColor: [88, 28, 172], fontStyle: 'bold', fontSize: 14 };
-        
-        // Tabela de Resumo de Pratos
-        const dishData = Object.entries(dishCount)
-            .sort((a, b) => b[1] - a[1])
-            .map(([dish, count]) => [dish, count]);
-        
-        doc.autoTable({
-            startY: 45,
-            head: [['Resumo de Pratos Vendidos (Prontos)']],
-            headStyles: summaryHeadStyles,
-            body: [],
-            theme: 'plain'
-        });
-        doc.autoTable({
-            startY: doc.autoTable.previous.finalY,
-            head: [['Prato', 'Quantidade']],
-            body: dishData.length > 0 ? dishData : [['Nenhum prato finalizado.', '']],
-            headStyles: headStyles,
-            theme: 'striped'
-        });
-    
-        // Tabela de Resumo por Loja
-        const storeData = Object.entries(storeCount).map(([store, count]) => [store, count]);
-        doc.autoTable({
-            startY: doc.autoTable.previous.finalY + 10,
-            head: [['Resumo por Loja (Prontos e Cancelados)']],
-            headStyles: summaryHeadStyles,
-            body: [],
-            theme: 'plain'
-        });
-        doc.autoTable({
-            startY: doc.autoTable.previous.finalY,
-            head: [['Loja', 'Total de Pedidos']],
-            body: storeData,
-            headStyles: headStyles,
-            theme: 'striped'
-        });
-
-        // Tabela de Pedidos Prontos
-        const readyOrders = orders
-            .filter(o => o.status === 'pronto')
-            .map(o => [
-                `#${o.id.slice(-6)}`, 
-                o.cliente, 
-                o.loja === 2 ? 'Loja 2' : 'Loja 1',
-                formatItems(o.items)
-            ]);
-        
-        doc.autoTable({
-            startY: doc.autoTable.previous.finalY + 10,
-            head: [['Pedidos Finalizados como "Prontos"']],
-            headStyles: { fillColor: [22, 160, 133], fontStyle: 'bold', fontSize: 14 },
-            body: [],
-            theme: 'plain'
-        });
-        doc.autoTable({
-            startY: doc.autoTable.previous.finalY,
-            head: [['Nº Pedido', 'Cliente', 'Loja', 'Itens Pedidos']],
-            body: readyOrders.length > 0 ? readyOrders : [['Nenhum pedido finalizado.', '', '', '']],
-            headStyles: { fillColor: [26, 188, 156] },
-            theme: 'grid',
-            columnStyles: { 3: { cellWidth: 'auto' } }
-        });
-
-        // Tabela de Pedidos Cancelados
-        const cancelledOrders = orders
-            .filter(o => o.status === 'cancelado')
-            .map(o => [
-                `#${o.id.slice(-6)}`, 
-                o.cliente, 
-                formatItems(o.items),
-                o.cancelReason || 'N/A'
-            ]);
-
-        doc.autoTable({
-            startY: doc.autoTable.previous.finalY + 10,
-            head: [['Pedidos "Cancelados"']],
-            headStyles: { fillColor: [192, 57, 43], fontStyle: 'bold', fontSize: 14 },
-            body: [],
-            theme: 'plain'
-        });
-        doc.autoTable({
-            startY: doc.autoTable.previous.finalY,
-            head: [['Nº Pedido', 'Cliente', 'Itens do Pedido', 'Motivo']],
-            body: cancelledOrders.length > 0 ? cancelledOrders : [['Nenhum pedido cancelado.', '', '', '']],
-            headStyles: { fillColor: [231, 76, 60] },
-            theme: 'grid',
-            columnStyles: { 2: { cellWidth: 'auto' } }
-        });
-
-        // --- Rodapé ---
-        const pageCount = doc.internal.getNumberOfPages();
-        for (let i = 1; i <= pageCount; i++) {
-            doc.setPage(i);
-            doc.setFontSize(8);
-            doc.setTextColor(150);
-            doc.text('Página ' + String(i) + ' de ' + String(pageCount), doc.internal.pageSize.width - 20, 287);
-        }
-    
-        // Salva o arquivo
-        const fileName = `${title.toLowerCase().replace(/[\s/]/g, '_').replace(/[^\w-]/g, '')}.pdf`;
-        doc.save(fileName);
     }
     
     function generateDailyReport() {
@@ -736,7 +733,7 @@ function initAppPage() {
     
         } catch (error) {
             console.error("Erro ao gerar relatório semanal:", error);
-            alert("Erro ao buscar dados para o relatório semanal. Verifique o console.");
+            alert("Erro ao procurar dados para o relatório semanal. Verifique a consola.");
         }
     }
     
@@ -796,13 +793,13 @@ function initAppPage() {
                         db.collection('pedidos').doc(orderId).update({ status: 'cancelado', cancelReason: reason });
                     }
                 }
-                else if (action === 'view') { showOrderModal(orderData); }
+                else if (action === 'view') { showOrderModal(orderData, modalOrderDetails, viewOrderModal); }
                 else if (action === 'edit') {
                     editOrder(orderId);
                     if (window.innerWidth <= 1024) { appContainer.classList.add('view-main'); }
                 }
             } else {
-                showOrderModal(orderData);
+                showOrderModal(orderData, modalOrderDetails, viewOrderModal);
             }
         });
         menuContent.addEventListener('change', e => {
@@ -867,4 +864,205 @@ function initAppPage() {
             if (e.target === viewOrderModal) { viewOrderModal.classList.add('hidden'); }
         });
     }
+}
+
+// ===================================================================
+// PÁGINA DE HISTÓRICO (historico.html)
+// ===================================================================
+function initHistoryPage() {
+    const dateFilter = document.getElementById('date-filter');
+    const ordersList = document.getElementById('historical-orders-list');
+    const statusFilters = document.querySelector('.order-filters-history');
+    const modal = document.getElementById('view-order-modal');
+    const modalDetails = document.getElementById('modal-order-details');
+    const closeModalBtn = document.getElementById('close-modal-btn');
+    // --- NOVO --- Seletores para as novas funcionalidades
+    const generateHistoryPdfBtn = document.getElementById('generate-history-pdf-btn');
+    const clearWeekBtn = document.getElementById('clear-week-btn');
+    const passwordModal = document.getElementById('password-modal');
+    const closePasswordModalBtn = document.getElementById('close-password-modal-btn');
+    const passwordInput = document.getElementById('password-input');
+    const confirmClearWeekBtn = document.getElementById('confirm-clear-week-btn');
+    
+    let fetchedOrders = [];
+    let currentStatusFilter = 'todos';
+    const CLEAR_WEEK_PASSWORD = "mania@2025"; // Senha de segurança
+
+    // Define a data de hoje como padrão no seletor de data
+    dateFilter.value = new Date().toISOString().split('T')[0];
+
+    async function fetchAndRenderOrders() {
+        const selectedDate = dateFilter.value;
+        if (!selectedDate) {
+            ordersList.innerHTML = '<p class="placeholder">Por favor, selecione uma data.</p>';
+            fetchedOrders = []; // Limpa os pedidos se a data for inválida
+            return;
+        }
+
+        ordersList.innerHTML = '<p class="placeholder">A procurar pedidos...</p>';
+
+        const startOfDay = new Date(selectedDate);
+        startOfDay.setUTCHours(0, 0, 0, 0);
+        
+        const endOfDay = new Date(selectedDate);
+        endOfDay.setUTCHours(23, 59, 59, 999);
+
+        try {
+            const q = db.collection('pedidos')
+                .where('timestamp', '>=', startOfDay)
+                .where('timestamp', '<=', endOfDay)
+                .orderBy('timestamp', 'desc');
+            
+            const snapshot = await q.get();
+            fetchedOrders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            renderHistoricalOrders();
+        } catch (error) {
+            console.error("Erro ao procurar pedidos históricos:", error);
+            fetchedOrders = []; // Limpa os pedidos em caso de erro
+            ordersList.innerHTML = '<p class="placeholder">Ocorreu um erro ao procurar os pedidos. Tente novamente.</p>';
+        }
+    }
+
+    function renderHistoricalOrders() {
+        const filteredOrders = fetchedOrders.filter(order => {
+            if (currentStatusFilter === 'todos') return true;
+            return order.status === currentStatusFilter;
+        });
+
+        if (filteredOrders.length === 0) {
+            ordersList.innerHTML = '<p class="placeholder">Nenhum pedido encontrado para esta data com os filtros selecionados.</p>';
+            return;
+        }
+
+        ordersList.innerHTML = filteredOrders.map(order => {
+            const clientName = order.loja === 2 ? `${order.cliente} - Loja 2` : order.cliente;
+            const displayId = order.id.slice(-6);
+            const time = order.timestamp.toDate().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            return `
+                <div class="order-item-card status-${order.status}" data-id="${order.id}">
+                    <h4>${clientName} (@ ${time})</h4>
+                    <p>Pedido #${displayId} - ${order.items.length} item(s)</p>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // --- NOVO --- Função para lidar com a limpeza da semana
+    async function handleClearWeek() {
+        const enteredPassword = passwordInput.value;
+        if (enteredPassword !== CLEAR_WEEK_PASSWORD) {
+            alert("Senha incorreta!");
+            passwordInput.value = '';
+            return;
+        }
+    
+        const selectedDate = new Date(dateFilter.value + 'T00:00:00'); // Garante que a data está correta
+        const dayOfWeek = selectedDate.getDay(); 
+        const diff = selectedDate.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Ajuste para domingo
+        
+        const monday = new Date(selectedDate.setDate(diff));
+        monday.setHours(0, 0, 0, 0);
+    
+        const sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+        sunday.setHours(23, 59, 59, 999);
+    
+        const confirmation = confirm(`ATENÇÃO!\n\nIsto irá APAGAR PERMANENTEMENTE todos os pedidos entre ${monday.toLocaleDateString('pt-BR')} e ${sunday.toLocaleDateString('pt-BR')}.\n\nEsta ação não pode ser desfeita. Deseja continuar?`);
+    
+        if (!confirmation) {
+            passwordInput.value = '';
+            passwordModal.classList.add('hidden');
+            return;
+        }
+    
+        try {
+            const snapshot = await db.collection('pedidos')
+                .where('timestamp', '>=', monday)
+                .where('timestamp', '<=', sunday)
+                .get();
+    
+            if (snapshot.empty) {
+                alert("Não há pedidos para apagar nesta semana.");
+                passwordInput.value = '';
+                passwordModal.classList.add('hidden');
+                return;
+            }
+    
+            // Usar Batch para apagar múltiplos documentos de forma eficiente
+            const batch = db.batch();
+            snapshot.docs.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+    
+            await batch.commit();
+            alert(`${snapshot.size} pedidos da semana foram apagados com sucesso!`);
+            
+            passwordInput.value = '';
+            passwordModal.classList.add('hidden');
+            fetchAndRenderOrders(); // Atualiza a visualização
+    
+        } catch (error) {
+            console.error("Erro ao limpar a semana:", error);
+            alert("Ocorreu um erro ao tentar apagar os pedidos. Verifique a consola para mais detalhes.");
+        }
+    }
+
+
+    // --- NOVO --- Event Listeners para as novas funcionalidades
+    generateHistoryPdfBtn.addEventListener('click', () => {
+        if (!dateFilter.value) {
+            alert("Por favor, selecione uma data para gerar o relatório.");
+            return;
+        }
+        const title = `Relatório do Dia - ${new Date(dateFilter.value + 'T00:00:00').toLocaleDateString('pt-BR')}`;
+        generateReportPdf(title, fetchedOrders);
+    });
+
+    clearWeekBtn.addEventListener('click', () => {
+        if (!dateFilter.value) {
+            alert("Por favor, selecione uma data para definir a semana a ser limpa.");
+            return;
+        }
+        passwordModal.classList.remove('hidden');
+        passwordInput.focus();
+    });
+
+    confirmClearWeekBtn.addEventListener('click', handleClearWeek);
+    closePasswordModalBtn.addEventListener('click', () => passwordModal.classList.add('hidden'));
+    passwordModal.addEventListener('click', (e) => {
+        if(e.target === passwordModal) passwordModal.classList.add('hidden');
+    });
+
+    // Event Listeners existentes
+    dateFilter.addEventListener('change', fetchAndRenderOrders);
+
+    statusFilters.addEventListener('click', (e) => {
+        const target = e.target.closest('.filter-btn');
+        if (!target) return;
+        statusFilters.querySelector('.active').classList.remove('active');
+        target.classList.add('active');
+        currentStatusFilter = target.dataset.status;
+        renderHistoricalOrders();
+    });
+
+    ordersList.addEventListener('click', (e) => {
+        const card = e.target.closest('.order-item-card');
+        if (!card) return;
+        const orderId = card.dataset.id;
+        const orderData = fetchedOrders.find(o => o.id === orderId);
+        if (orderData) {
+            // Reutiliza a função showOrderModal, passando os elementos do modal da página de histórico
+            showOrderModal(orderData, modalDetails, modal);
+        }
+    });
+    
+    closeModalBtn.addEventListener('click', () => modal.classList.add('hidden'));
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.classList.add('hidden');
+        }
+    });
+
+    // Carregar pedidos para a data de hoje ao iniciar
+    fetchAndRenderOrders();
 }
