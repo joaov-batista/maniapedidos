@@ -57,11 +57,10 @@ body {
 /* CABEÇALHO */
 .app-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
 .app-header h1 { font-size: 1.8rem; }
-.header-actions { display: flex; gap: 0.5rem; }
+.header-actions { display: flex; gap: 0.5rem; align-items: center; }
 .sidebar-header { display: flex; justify-content: space-between; align-items: center; }
 .sidebar-header h2 { font-size: 1.2rem; }
 .header-right-controls { display: flex; gap: 0.5rem; }
-.header-right-controls .btn-small i { font-size: 0.9rem; } /* Ajuste no ícone do PDF */
 
 /* FILA DE PEDIDOS (SIDEBAR) */
 .order-controls { margin-top: 1rem; }
@@ -180,6 +179,20 @@ body {
 .modal-body .modal-item { margin-bottom: 1rem; }
 .modal-body .modal-item ul { list-style: none; padding-left: 1rem; color: var(--text-secondary); }
 .modal-body .modal-item li::before { content: "- "; }
+.modal-body input[type="password"] {
+    width: 100%;
+    padding: 0.8rem;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+    background-color: var(--primary-color);
+    border: 1px solid var(--card-bg);
+    border-radius: var(--border-radius);
+    color: white;
+    font-size: 1rem;
+}
+.modal-body button {
+    width: 100%;
+}
 
 /* PÁGINA ADMIN */
 .admin-page-body { overflow-y: auto; }
@@ -190,93 +203,132 @@ body {
 .menu-group-admin-card input, .menu-group-admin-card textarea { width: 100%; padding: 1rem; margin-bottom: 1rem; font-size: 1rem; background: var(--bg-color); border: 1px solid var(--card-bg); border-radius: var(--border-radius); color: var(--text-color); resize: vertical; }
 .admin-actions { display: flex; gap: 1rem; justify-content: flex-end; align-items: center; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--primary-color); }
 
-/* ESTILOS DE IMPRESSÃO E PDF */
-#report-container-pdf {
-    position: absolute;
-    left: -9999px;
-    top: -9999px;
-    width: 800px;
-    padding: 20px;
-    background: white;
-    color: black;
+/* --- PÁGINA DE HISTÓRICO --- */
+.history-filters {
+    display: grid;
+    grid-template-columns: 1fr 2fr auto;
+    gap: 1.5rem;
+    align-items: flex-end;
+    padding: 1rem;
+    background-color: var(--primary-color);
+    border-radius: var(--border-radius);
+    margin-bottom: 1.5rem;
+}
+
+.history-actions {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    justify-content: flex-start;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.filter-group label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.date-input-wrapper {
+    position: relative;
+    display: inline-block;
+    background-color: var(--bg-color);
+    border: 1px solid var(--card-bg);
+    border-radius: var(--border-radius);
+    padding: 0.8rem 1rem;
+    color: white;
+    font-size: 1rem;
+}
+
+.date-input-wrapper input[type="date"] {
+    background: transparent;
+    border: none;
+    color: white;
     font-family: 'Inter', sans-serif;
-    font-size: 10pt;
+    font-size: 1rem;
+    outline: none;
 }
 
-@media print {
-    body.admin-page-body > *:not(#printable-menu),
-    body:not(.admin-page-body) > *:not(#recibo-container) {
-        display: none !important;
-    }
-    #printable-menu, #printable-menu *,
-    #recibo-container, #recibo-container * {
-        display: block !important;
-        visibility: visible !important;
-        margin: 0; padding: 0;
-    }
-    @page { 
-        margin: 10mm;
-    }
-
-    /* Comanda/Recibo */
-    #recibo-container {
-        width: 72mm; font-family: 'Consolas', 'Courier New', monospace; font-size: 10pt;
-        color: #000; text-align: center;
-    }
-    #recibo-container .recibo-header h1 { font-size: 14pt; margin: 0 0 5px 0; font-weight: bold; }
-    #recibo-container .recibo-info { font-size: 9pt; margin: 5px 0; }
-    #recibo-container .recibo-section h2 { font-size: 11pt; font-weight: bold; padding: 5px 0; margin: 8px 0; }
-    #recibo-container .recibo-item { margin-bottom: 8px; text-align: center; }
-    #recibo-container .recibo-item p { margin: 0; font-weight: bold; font-size: 11pt; }
-    #recibo-container .recibo-item ul { list-style: none; padding: 0; }
-    #recibo-container .recibo-item li::before { content: "- "; }
-    #recibo-container hr { border: none; border-top: 1px dashed #000; margin: 8px 0; }
-
-    /* Cardápio do Dia */
-    #printable-menu { font-family: 'Inter', sans-serif; color: #000; }
-    #printable-menu h1 { font-size: 22pt; text-align: center; margin-bottom: 5px; }
-    #printable-menu > p { font-size: 12pt; text-align: center; margin-bottom: 15px; }
-    #printable-menu .print-hr { border: none; border-top: 1px solid #000; margin-bottom: 15px; }
-    #printable-menu .print-group { margin-bottom: 20px; }
-    #printable-menu h2 { font-size: 16pt; margin-bottom: 10px; background-color: #eee; padding: 5px; }
-    #printable-menu h3 { font-size: 12pt; margin: 10px 0 5px 0; }
-    #printable-menu ul { list-style: none; padding-left: 10px; }
-    #printable-menu li { font-size: 12pt; margin-bottom: 5px; }
+input[type="date"]::-webkit-calendar-picker-indicator {
+    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="15" viewBox="0 0 24 24"><path fill="%23c3b3e0" d="M20 3h-1V1h-2v2H7V1H5v2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 18H4V8h16v13z"/></svg>') no-repeat;
+    cursor: pointer;
+    opacity: 0.8;
 }
+
+.order-filters-history {
+    display: flex;
+    gap: 0.5rem;
+    background-color: var(--bg-color);
+    border-radius: var(--border-radius);
+    padding: 0.3rem;
+    border: 1px solid var(--card-bg);
+}
+
+.order-filters-history .filter-btn {
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+}
+
+#historical-orders-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+}
+
+.back-button {
+    align-self: center;
+}
+
+/* ESTILOS DE IMPRESSÃO */
+@media print { 
+    body > *:not(#recibo-container) { display: none !important; } 
+    #recibo-container, #recibo-container * { display: block !important; visibility: visible !important; margin: 0; padding: 0; } 
+    @page { margin: 10mm; } 
+    #recibo-container { width: 72mm; font-family: 'Consolas', 'Courier New', monospace; font-size: 10pt; color: #000; text-align: center; } 
+    #recibo-container .recibo-header h1 { font-size: 14pt; margin: 0 0 5px 0; font-weight: bold; } 
+    #recibo-container .recibo-info { font-size: 9pt; margin: 5px 0; } 
+    #recibo-container .recibo-section h2 { font-size: 11pt; font-weight: bold; padding: 5px 0; margin: 8px 0; } 
+    #recibo-container .recibo-item { margin-bottom: 8px; text-align: center; } 
+    #recibo-container .recibo-item p { margin: 0; font-weight: bold; font-size: 11pt; } 
+    #recibo-container .recibo-item ul { list-style: none; padding: 0; } 
+    #recibo-container .recibo-item li::before { content: "- "; } 
+    #recibo-container hr { border: none; border-top: 1px dashed #000; margin: 8px 0; } 
+} 
 
 /* --- SEÇÃO RESPONSIVA --- */
-@media (max-width: 1024px) {
-    #app-container { padding: 0; overflow: hidden; }
-    .sidebar {
-        width: 100%; height: 100%; padding: 1rem;
-        transition: transform 0.3s ease-in-out; z-index: 10;
-        position: absolute; top: 0; left: 0; overflow-y: auto;
+@media (max-width: 1024px) { 
+    #app-container { padding: 0; overflow: hidden; } 
+    .sidebar { width: 100%; height: 100%; padding: 1rem; transition: transform 0.3s ease-in-out; z-index: 10; position: absolute; top: 0; left: 0; overflow-y: auto; } 
+    .main-content { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--primary-color); padding: 1rem; transform: translateX(100%); transition: transform 0.3s ease-in-out; z-index: 20; display: flex; flex-direction: column; } 
+    #app-container.view-main .sidebar { transform: translateX(-100%); } 
+    #app-container.view-main .main-content { transform: translateX(0); } 
+    #new-order-column { display: flex; flex-direction: column; flex-grow: 1; overflow-y: auto; } 
+    #menu-content, #order-summary-panel { overflow: visible; height: auto; flex-shrink: 0; } 
+    .desktop-only { display: none !important; } 
+    .mobile-only { display: flex !important; } 
+    .app-header { padding: 0 1rem; align-items: center; } 
+    .app-header h1 { font-size: 1.2rem; } 
+    .header-actions .btn-secondary { padding: 0.5rem; } 
+    .header-actions .btn-secondary i { margin: 0; } 
+    #mobile-fab { position: fixed; bottom: 2rem; right: 2rem; z-index: 15; width: auto; padding: 0.8rem 1rem; height: 60px; border-radius: 50px; background-color: var(--accent-color); color: white; border: none; font-size: 1rem; justify-content: center; align-items: center; box-shadow: 0 5px 15px rgba(0,0,0,0.3); gap: 0.5rem; } 
+    .admin-container { margin: 1rem; padding: 1rem; } 
+    .menu-group-admin-card div { flex-direction: column; } 
+    .admin-actions { flex-wrap: wrap; position: static; margin: 1rem 0 0 0; padding: 1rem 0 0 0; border-radius: 0; } 
+}
+
+@media (max-width: 768px) {
+    .history-filters {
+        grid-template-columns: 1fr;
+        align-items: stretch;
     }
-    .main-content {
-        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background-color: var(--primary-color); padding: 1rem;
-        transform: translateX(100%); transition: transform 0.3s ease-in-out; z-index: 20;
-        display: flex; flex-direction: column;
+    .back-button {
+        margin-left: 0;
+        margin-top: 1rem;
+        text-align: center;
     }
-    #app-container.view-main .sidebar { transform: translateX(-100%); }
-    #app-container.view-main .main-content { transform: translateX(0); }
-    #new-order-column { display: flex; flex-direction: column; flex-grow: 1; overflow-y: auto; }
-    #menu-content, #order-summary-panel { overflow: visible; height: auto; flex-shrink: 0; }
-    .desktop-only { display: none !important; }
-    .mobile-only { display: flex !important; }
-    .app-header { padding: 0 1rem; align-items: center; }
-    .app-header h1 { font-size: 1.2rem; }
-    .app-header .header-actions .btn-secondary { padding: 0.5rem; }
-    .app-header .header-actions .btn-secondary i { margin: 0; }
-    #mobile-fab {
-        position: fixed; bottom: 2rem; right: 2rem; z-index: 15;
-        width: auto; padding: 0.8rem 1rem; height: 60px;
-        border-radius: 50px; background-color: var(--accent-color);
-        color: white; border: none; font-size: 1rem;
-        justify-content: center; align-items: center;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.3); gap: 0.5rem;
-    }
-    .admin-container { margin: 1rem; padding: 1rem; }
-    .menu-group-admin-card div { flex-direction: column; }
-    .admin-actions { flex-wrap: wrap; position: static; margin: 1rem 0 0 0; padding: 1rem 0 0 0; border-radius: 0; }
 }
