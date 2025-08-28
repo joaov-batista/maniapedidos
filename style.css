@@ -38,7 +38,7 @@ body {
 .auth-box button {
     width: 100%; padding: 1rem; margin-top: 1rem; background-color: var(--accent-color);
     color: white; border: none; border-radius: var(--border-radius); font-size: 1.1rem;
-    font-weight: 600; cursor: pointer; transition: background-color: 0.3s;
+    font-weight: 600; cursor: pointer; transition: background-color 0.3s;
 }
 .auth-box button:hover { background-color: #7b2cf1; }
 .auth-toggle { margin-top: 1.5rem; }
@@ -61,71 +61,32 @@ body {
 .sidebar-header { display: flex; justify-content: space-between; align-items: center; }
 .sidebar-header h2 { font-size: 1.2rem; }
 .header-right-controls { display: flex; gap: 0.5rem; }
+.header-right-controls .btn-small i { font-size: 0.9rem; } /* Ajuste no ícone do PDF */
 
 /* FILA DE PEDIDOS (SIDEBAR) */
 .order-controls { margin-top: 1rem; }
 .total-orders-display {
-    text-align: center;
-    margin-bottom: 1rem;
-    font-weight: 600;
-    background-color: var(--primary-color);
-    padding: 0.5rem;
-    border-radius: var(--border-radius);
-    color: var(--text-secondary);
+    text-align: center; margin-bottom: 1rem; font-weight: 600;
+    background-color: var(--primary-color); padding: 0.5rem; border-radius: var(--border-radius); color: var(--text-secondary);
 }
-.total-orders-display span {
-    color: var(--text-color);
-    font-size: 1.1em;
-}
-
+.total-orders-display span { color: var(--text-color); font-size: 1.1em; }
 .order-filters {
-    display: flex;
-    gap: 0.5rem;
-    margin-bottom: 0.5rem;
-    background-color: var(--primary-color);
-    padding: 0.5rem;
-    border-radius: var(--border-radius);
+    display: flex; gap: 0.5rem; margin-bottom: 0.5rem;
+    background-color: var(--primary-color); padding: 0.5rem; border-radius: var(--border-radius);
 }
-
 .filter-btn {
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.6rem;
-    padding: 0.4rem;
-    background: transparent;
-    border: none;
-    color: var(--text-secondary);
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: all 0.2s ease;
+    flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.6rem; padding: 0.4rem; background: transparent; border: none;
+    color: var(--text-secondary); border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s ease;
 }
-
 .filter-btn:hover { background-color: var(--card-bg); color: white; }
 .filter-btn.active { background-color: var(--accent-color); color: white; }
-
 .order-count {
-    flex-shrink: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.9em;
-    min-width: 15px;
-    height: 15px;
-    padding: 2px;
-    margin-left: 5px;
-    background-color: rgba(0, 0, 0, 0.2);
-    color: var(--text-color);
-    border-radius: 8px;
-    font-weight: 700;
+    flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 0.9em;
+    min-width: 15px; height: 15px; padding: 2px; margin-left: 5px;
+    background-color: rgba(0, 0, 0, 0.2); color: var(--text-color); border-radius: 8px; font-weight: 700;
 }
-
 .filter-btn.active .order-count { background-color: rgba(255, 255, 255, 0.2); }
 .priority-filter-wrapper { margin-bottom: 1rem; }
 .priority-toggle {
@@ -177,10 +138,15 @@ body {
 .summary-item h5 { font-size: 1.1rem; } .summary-item ul { list-style: none; padding-left: 1rem; color: var(--text-secondary); }
 .summary-item-actions { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
 .order-details-inputs { margin-top: auto; border-top: 1px solid var(--primary-color); padding-top: 1.5rem; flex-shrink: 0; }
-.order-details-inputs input[type="text"] { width: 100%; padding: 0.8rem; margin-bottom: 1rem; background-color: var(--primary-color); border: 1px solid var(--card-bg); border-radius: var(--border-radius); color: white; font-size: 1rem; }
+.order-details-inputs input[type="text"], #endereco-entrega {
+    width: 100%; padding: 0.8rem; margin-bottom: 1rem; background-color: var(--primary-color);
+    border: 1px solid var(--card-bg); border-radius: var(--border-radius); color: white; font-size: 1rem; resize: vertical;
+}
 .radio-group { display: flex; gap: 1rem; margin-bottom: 1rem; }
-.checkbox-wrapper { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; background-color: var(--primary-color); padding: 0.8rem; border-radius: var(--border-radius); }
+.checkbox-group { display: flex; gap: 1rem; margin-bottom: 1rem; }
+.checkbox-wrapper { display: flex; align-items: center; gap: 0.5rem; background-color: var(--primary-color); padding: 0.8rem; border-radius: var(--border-radius); flex: 1; }
 .checkbox-wrapper input[type="checkbox"] { width: 1.2em; height: 1.2em; accent-color: var(--accent-color); }
+.action-buttons-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.5rem; margin-bottom: 0.5rem;}
 
 /* BOTÕES GERAIS */
 .btn-primary, .btn-secondary, .btn-danger, .btn-success, .btn-small { padding: 0.8rem 1.5rem; border: none; border-radius: var(--border-radius); font-size: 1rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; transition: all 0.2s ease; }
@@ -197,13 +163,12 @@ body {
 .btn-danger:hover { background-color: #b82c38; }
 .btn-success { background-color: var(--success-color); color: white; }
 .btn-success:hover { background-color: #20a552; }
-#deleteAllOrdersBtn, #printReportBtn { background-color: transparent; border: 1px solid var(--card-bg); }
-#deleteAllOrdersBtn:hover { background-color: var(--danger-color); color: white; border-color: var(--danger-color); }
-#printReportBtn:hover { background-color: var(--card-bg); color: white; border-color: var(--card-bg); }
+#generateDailyReportBtn, #generateWeeklyReportBtn { background-color: transparent; border: 1px solid var(--card-bg); }
+#generateDailyReportBtn:hover, #generateWeeklyReportBtn:hover { background-color: var(--card-bg); color: white; border-color: var(--card-bg); }
 .mobile-only { display: none !important; }
 
 /* MODAL DE VISUALIZAÇÃO */
-.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); display: flex; justify-content: center; align-items: center; z-index: 2000; transition: opacity: 0.2s ease; }
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); display: flex; justify-content: center; align-items: center; z-index: 2000; transition: opacity 0.2s ease; }
 .modal-content { background: var(--bg-color); padding: 2rem; border-radius: var(--border-radius); border-top: 4px solid var(--accent-color); width: 90%; max-width: 500px; box-shadow: var(--shadow); transform: scale(0.95); transition: transform 0.2s ease; max-height: 90vh; display: flex; flex-direction: column; }
 .modal-overlay:not(.hidden) .modal-content { transform: scale(1); }
 .modal-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 1rem; margin-bottom: 1rem; border-bottom: 1px solid var(--primary-color); }
@@ -225,7 +190,19 @@ body {
 .menu-group-admin-card input, .menu-group-admin-card textarea { width: 100%; padding: 1rem; margin-bottom: 1rem; font-size: 1rem; background: var(--bg-color); border: 1px solid var(--card-bg); border-radius: var(--border-radius); color: var(--text-color); resize: vertical; }
 .admin-actions { display: flex; gap: 1rem; justify-content: flex-end; align-items: center; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--primary-color); }
 
-/* ESTILOS DE IMPRESSÃO */
+/* ESTILOS DE IMPRESSÃO E PDF */
+#report-container-pdf {
+    position: absolute;
+    left: -9999px;
+    top: -9999px;
+    width: 800px;
+    padding: 20px;
+    background: white;
+    color: black;
+    font-family: 'Inter', sans-serif;
+    font-size: 10pt;
+}
+
 @media print {
     body.admin-page-body > *:not(#printable-menu),
     body:not(.admin-page-body) > *:not(#recibo-container) {
@@ -238,35 +215,25 @@ body {
         margin: 0; padding: 0;
     }
     @page { 
-        margin: 0mm; /* <<<<<<< CORREÇÃO: margem 0 para comandas */
+        margin: 10mm;
     }
 
-    /* Estilo de Impressão: Comanda/Recibo */
-    #recibo-container:not(.report-mode) {
-        width: 72mm;
-        font-family: 'Consolas', 'Courier New', monospace;
-        font-size: 10pt;
-        color: #000;
-        text-align: center;
-        /* <<<<<<< CORREÇÃO: Adicionando estas linhas para isolar o elemento */
-        position: absolute;
-        top: 0;
-        left: 0;
+    /* Comanda/Recibo */
+    #recibo-container {
+        width: 72mm; font-family: 'Consolas', 'Courier New', monospace; font-size: 10pt;
+        color: #000; text-align: center;
     }
-    #recibo-container:not(.report-mode) .recibo-header h1 { font-size: 14pt; margin: 0 0 5px 0; font-weight: bold; }
-    #recibo-container:not(.report-mode) .recibo-info { font-size: 9pt; margin: 5px 0; }
-    #recibo-container:not(.report-mode) .recibo-section h2 { font-size: 11pt; font-weight: bold; padding: 5px 0; margin: 8px 0; }
-    #recibo-container:not(.report-mode) .recibo-item { margin-bottom: 8px; text-align: center; }
-    #recibo-container:not(.report-mode) .recibo-item p { margin: 0; font-weight: bold; font-size: 11pt; }
-    #recibo-container:not(.report-mode) .recibo-item ul { list-style: none; padding: 0; }
-    #recibo-container:not(.report-mode) .recibo-item li::before { content: "- "; }
-    #recibo-container:not(.report-mode) hr { border: none; border-top: 1px dashed #000; margin: 8px 0; }
+    #recibo-container .recibo-header h1 { font-size: 14pt; margin: 0 0 5px 0; font-weight: bold; }
+    #recibo-container .recibo-info { font-size: 9pt; margin: 5px 0; }
+    #recibo-container .recibo-section h2 { font-size: 11pt; font-weight: bold; padding: 5px 0; margin: 8px 0; }
+    #recibo-container .recibo-item { margin-bottom: 8px; text-align: center; }
+    #recibo-container .recibo-item p { margin: 0; font-weight: bold; font-size: 11pt; }
+    #recibo-container .recibo-item ul { list-style: none; padding: 0; }
+    #recibo-container .recibo-item li::before { content: "- "; }
+    #recibo-container hr { border: none; border-top: 1px dashed #000; margin: 8px 0; }
 
-    /* Estilo de Impressão: Cardápio do Dia */
-    #printable-menu {
-        font-family: 'Inter', sans-serif; color: #000;
-        @page { margin: 10mm; } /* Margem específica para o cardápio */
-    }
+    /* Cardápio do Dia */
+    #printable-menu { font-family: 'Inter', sans-serif; color: #000; }
     #printable-menu h1 { font-size: 22pt; text-align: center; margin-bottom: 5px; }
     #printable-menu > p { font-size: 12pt; text-align: center; margin-bottom: 15px; }
     #printable-menu .print-hr { border: none; border-top: 1px solid #000; margin-bottom: 15px; }
@@ -275,59 +242,25 @@ body {
     #printable-menu h3 { font-size: 12pt; margin: 10px 0 5px 0; }
     #printable-menu ul { list-style: none; padding-left: 10px; }
     #printable-menu li { font-size: 12pt; margin-bottom: 5px; }
-
-    /* Estilo de Impressão: Relatório do Dia */
-    #recibo-container.report-mode {
-        width: 100%;
-        font-family: 'Inter', sans-serif;
-        font-size: 10pt;
-        color: #000;
-        text-align: left;
-        position: static; /* <<<<<<< Garante que o relatório use o fluxo normal */
-        @page { margin: 10mm; } /* Margem específica para o relatório */
-    }
-    .report-header { text-align: center; margin-bottom: 20px; }
-    .report-header h1 { font-size: 18pt; margin-bottom: 5px; }
-    .report-summary { border: 1px solid #ccc; padding: 15px; margin-bottom: 20px; }
-    .report-summary h2 { font-size: 14pt; margin-top: 0; }
-    .report-summary p { margin: 5px 0; }
-    .report-order-list h2 { font-size: 14pt; margin-bottom: 10px; border-bottom: 2px solid #000; padding-bottom: 5px;}
-    .report-order-item { border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; break-inside: avoid; }
-    .report-order-item h4 { font-size: 12pt; margin: 0 0 5px 0; }
-    .report-order-item p { margin: 3px 0; }
-    .report-order-item ul { padding-left: 20px; margin-top: 5px; }
-    .report-order-item i { color: #555; }
 }
 
 /* --- SEÇÃO RESPONSIVA --- */
 @media (max-width: 1024px) {
     #app-container { padding: 0; overflow: hidden; }
     .sidebar {
-        width: 100%; height: 100%;
-        padding: 1rem;
-        transition: transform 0.3s ease-in-out;
-        z-index: 10;
-        position: absolute; top: 0; left: 0;
-        overflow-y: auto;
+        width: 100%; height: 100%; padding: 1rem;
+        transition: transform 0.3s ease-in-out; z-index: 10;
+        position: absolute; top: 0; left: 0; overflow-y: auto;
     }
     .main-content {
-        position: fixed; top: 0; left: 0;
-        width: 100%; height: 100%;
-        background-color: var(--primary-color);
-        padding: 1rem;
-        transform: translateX(100%);
-        transition: transform 0.3s ease-in-out;
-        z-index: 20;
-        display: flex;
-        flex-direction: column;
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background-color: var(--primary-color); padding: 1rem;
+        transform: translateX(100%); transition: transform 0.3s ease-in-out; z-index: 20;
+        display: flex; flex-direction: column;
     }
     #app-container.view-main .sidebar { transform: translateX(-100%); }
     #app-container.view-main .main-content { transform: translateX(0); }
-    #new-order-column { 
-        display: flex; flex-direction: column;
-        flex-grow: 1;
-        overflow-y: auto;
-    }
+    #new-order-column { display: flex; flex-direction: column; flex-grow: 1; overflow-y: auto; }
     #menu-content, #order-summary-panel { overflow: visible; height: auto; flex-shrink: 0; }
     .desktop-only { display: none !important; }
     .mobile-only { display: flex !important; }
@@ -341,8 +274,7 @@ body {
         border-radius: 50px; background-color: var(--accent-color);
         color: white; border: none; font-size: 1rem;
         justify-content: center; align-items: center;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-        gap: 0.5rem;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3); gap: 0.5rem;
     }
     .admin-container { margin: 1rem; padding: 1rem; }
     .menu-group-admin-card div { flex-direction: column; }
