@@ -97,7 +97,7 @@ function initAdminPage() {
                     .then(() => alert('Cardápio salvo com sucesso!'))
                     .catch(err => alert('Erro: ' + err.message));
             } else {
-                 db.collection('configuracao').doc('cardapio-do-dia').delete()
+                db.collection('configuracao').doc('cardapio-do-dia').delete()
                     .then(() => alert('Nenhum grupo válido. Cardápio em branco salvo.'))
                     .catch(err => alert('Erro: ' + err.message));
             }
@@ -107,24 +107,24 @@ function initAdminPage() {
             const printableContainer = document.getElementById('printable-menu');
             let menuHTML = `<h1>Cardápio do Dia - Mania Mix</h1>`;
             menuHTML += `<p>Data: ${new Date().toLocaleDateString('pt-BR')}</p><hr class="print-hr">`;
-        
+
             const groupCards = document.querySelectorAll('.menu-group-admin-card');
             if (groupCards.length === 0 || !groupCards[0].querySelector('.group-name').value.trim()) {
                 alert('O cardápio está vazio. Adicione grupos e pratos antes de imprimir.');
                 return;
             }
-        
+
             groupCards.forEach(card => {
                 const name = card.querySelector('.group-name').value.trim();
                 const dishes = card.querySelector('.group-dishes').value.split('\n').map(d => d.trim()).filter(Boolean);
                 const sides = card.querySelector('.group-sides').value.split('\n').map(s => s.trim()).filter(Boolean);
-                
+
                 if (name && dishes.length > 0) {
                     menuHTML += `<div class="print-group"><h2>${name}</h2>`;
                     menuHTML += '<ul>';
                     dishes.forEach(dish => { menuHTML += `<li>${dish}</li>`; });
                     menuHTML += '</ul>';
-        
+
                     if (sides.length > 0) {
                         menuHTML += '<h3>Acompanhamentos Sugeridos:</h3><ul>';
                         sides.forEach(side => { menuHTML += `<li>- ${side}</li>`; });
@@ -133,7 +133,7 @@ function initAdminPage() {
                     menuHTML += '</div>';
                 }
             });
-        
+
             printableContainer.innerHTML = menuHTML;
             window.print();
             printableContainer.innerHTML = '';
@@ -145,7 +145,6 @@ function initAdminPage() {
         loadMenuFromFirebase();
     }
 }
-
 
 // ===================================================================
 // PÁGINA DE PEDIDOS (index.html)
@@ -167,8 +166,9 @@ function initAppPage() {
     const savePrintBtn = document.getElementById('save-print-btn');
     const newOrderBtn = document.getElementById('new-order-btn');
     const addItemBtn = document.getElementById('add-item-btn');
-    const deleteAllOrdersBtn = document.getElementById('deleteAllOrdersBtn');
-    const printReportBtn = document.getElementById('printReportBtn');
+    const generateDailyReportBtn = document.getElementById('generateDailyReportBtn');
+    const generateWeeklyReportBtn = document.getElementById('generateWeeklyReportBtn');
+    const employeePrintBtn = document.getElementById('employee-print-btn');
     const orderFilters = document.querySelector('.order-filters');
     const typeFilters = document.querySelector('.type-filters');
     const priorityToggleBtn = document.getElementById('priority-toggle-btn');
@@ -179,16 +179,19 @@ function initAppPage() {
     const closeModalBtn = document.getElementById('close-modal-btn');
     const modalOrderDetails = document.getElementById('modal-order-details');
     const prioridadeCheck = document.getElementById('prioridade-check');
+    const loja2Check = document.getElementById('loja2-check');
+    const addressSection = document.getElementById('address-section');
+    const enderecoEntregaInput = document.getElementById('endereco-entrega');
 
     // ESTADO
     let menuData = [];
     let currentOrderItems = [];
-    let displayedOrders = [];
+    let allOrdersFromListener = [];
     let currentStatusFilter = 'pendente';
     let currentTypeFilter = 'todos';
     let priorityFilterActive = false;
     let unsubscribeOrders;
-    let isAddingItem = false; // Flag para evitar cliques duplos
+    let isAddingItem = false;
 
     // LÓGICA DE INICIALIZAÇÃO
     auth.onAuthStateChanged(async (user) => {
@@ -204,7 +207,7 @@ function initAppPage() {
             if (unsubscribeOrders) unsubscribeOrders();
         }
     });
-
+    
     function setupAuthEventListeners() {
         authToggleLink.addEventListener('click', e => {
             e.preventDefault();
@@ -217,14 +220,12 @@ function initAppPage() {
             authSubtitle.innerText = isLogin ? 'Acesse sua conta para iniciar' : 'É rápido e fácil.';
             authToggleLink.innerText = isLogin ? 'Não tem uma conta? Cadastre-se' : 'Já tem uma conta? Faça Login';
         });
-
         loginForm.addEventListener('submit', e => {
             e.preventDefault();
             const email = loginForm['login-email'].value;
             const password = loginForm['login-password'].value;
             auth.signInWithEmailAndPassword(email, password).catch(err => alert(err.message));
         });
-
         registerForm.addEventListener('submit', e => {
             e.preventDefault();
             const email = registerForm['register-email'].value;
@@ -242,16 +243,18 @@ function initAppPage() {
     }
     setupAuthEventListeners();
 
-    // FUNÇÕES DE LÓGICA
     function resetEntireOrder() {
         currentOrderItems = [];
         clienteNameInput.value = '';
         extraItemsInput.value = '';
         editingOrderIdInput.value = '';
+        enderecoEntregaInput.value = '';
         prioridadeCheck.checked = false;
+        loja2Check.checked = false;
         document.querySelector('#retirada').checked = true;
+        addressSection.classList.add('hidden');
         document.querySelectorAll('.order-item-card.editing').forEach(c => c.classList.remove('editing'));
-        savePrintBtn.innerHTML = '<i class="fas fa-print"></i> Finalizar e Imprimir';
+        savePrintBtn.innerHTML = '<i class="fas fa-save"></i> Salvar e Imprimir';
         newOrderBtn.classList.add('hidden');
         clearMenuSelection();
         updateOrderSummary();
@@ -285,13 +288,18 @@ function initAppPage() {
     }
 
     async function loadMenu() {
-        const docRef = db.collection('configuracao').doc('cardapio-do-dia');
-        const docSnap = await docRef.get();
-        if (docSnap.exists && docSnap.data().menu.length > 0) {
-            menuData = docSnap.data().menu;
-            renderMenu(menuData);
-        } else {
-            menuContent.innerHTML = '<h3>👋 Cardápio do dia não cadastrado.</h3>';
+        try {
+            const docRef = db.collection('configuracao').doc('cardapio-do-dia');
+            const docSnap = await docRef.get();
+            if (docSnap.exists && docSnap.data().menu.length > 0) {
+                menuData = docSnap.data().menu;
+                renderMenu(menuData);
+            } else {
+                menuContent.innerHTML = '<h3>👋 Cardápio do dia não cadastrado.</h3>';
+            }
+        } catch (error) {
+            console.error("Erro ao carregar o cardápio:", error);
+            menuContent.innerHTML = '<h3>❌ Erro ao carregar o cardápio.</h3>';
         }
     }
 
@@ -309,38 +317,60 @@ function initAppPage() {
         });
     }
 
-    function saveAndPrintOrder() {
+    function getOrderDataFromForm() {
         const cliente = clienteNameInput.value.trim();
-        if (currentOrderItems.length === 0) return alert('O pedido está vazio!');
-        if (!cliente) return alert('Digite o nome do cliente!');
+        if (currentOrderItems.length === 0) {
+            alert('O pedido está vazio!');
+            return null;
+        }
+        if (!cliente) {
+            alert('Digite o nome do cliente!');
+            return null;
+        }
         
-        const orderId = editingOrderIdInput.value;
-        const orderData = {
+        return {
             cliente,
+            loja: loja2Check.checked ? 2 : 1,
             items: currentOrderItems,
             extras: extraItemsInput.value.trim(),
             tipo: document.querySelector('input[name="tipo_pedido"]:checked').value,
+            endereco: enderecoEntregaInput.value.trim(),
             status: 'pendente',
             prioridade: prioridadeCheck.checked,
             cancelReason: '',
             timestamp: serverTimestamp()
         };
+    }
 
+    function saveAndPrintOrder() {
+        const orderData = getOrderDataFromForm();
+        if (!orderData) return;
+
+        const orderId = editingOrderIdInput.value;
         const operation = orderId 
             ? db.collection('pedidos').doc(orderId).update(orderData)
             : db.collection('pedidos').add(orderData);
 
         operation.then((docRef) => {
             const finalOrderData = { id: orderId || docRef.id, ...orderData };
-            printReceipt(finalOrderData);
+            printReceipt(finalOrderData, false);
             resetEntireOrder();
-        }).catch(err => alert('Erro: ' + err.message));
+        }).catch(err => alert('Erro ao salvar pedido: ' + err.message));
+    }
+    
+    function printEmployeeOrder() {
+        const orderData = getOrderDataFromForm();
+        if (!orderData) return;
+        orderData.id = Date.now().toString();
+        printReceipt(orderData, true);
+        resetEntireOrder();
     }
 
-    function printReceipt(order) {
+    function printReceipt(order, isEmployeeOrder) {
         const now = (order.timestamp && order.timestamp.toDate) ? order.timestamp.toDate() : new Date();
         const hora = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
         const orderNumber = (order.id || Date.now().toString()).slice(-6);
+        const clientName = order.loja === 2 ? `${order.cliente} - Loja 2` : order.cliente;
 
         let itemsHTML = order.items.map((item, index) => {
             const itemContent = `
@@ -354,6 +384,7 @@ function initAppPage() {
         const reciboHTML = `
             <div class="recibo-header">
                 <h1>${order.tipo.toUpperCase()}${order.prioridade ? ' - URGENTE' : ''}</h1>
+                ${isEmployeeOrder ? '<h2>PEDIDO FUNCIONÁRIO</h2>' : ''}
             </div>
             <hr>
             <div class="recibo-info">
@@ -361,11 +392,12 @@ function initAppPage() {
                 <span>Hora: ${hora}</span>
             </div>
             <div class="recibo-section">
-                <h2>Cliente: ${order.cliente}</h2>
+                <h2>Cliente: ${clientName}</h2>
             </div>
             <hr>
             ${itemsHTML}
             ${order.extras ? `<hr><div class="recibo-item"><p>EXTRAS:</p><ul><li>${order.extras}</li></ul></div>` : ''}
+            ${order.endereco ? `<hr><div class="recibo-item"><p>ENDEREÇO:</p><ul><li>${order.endereco}</li></ul></div>` : ''}
         `;
         document.getElementById('recibo-container').innerHTML = reciboHTML;
         window.print();
@@ -375,7 +407,7 @@ function initAppPage() {
         ordersList.innerHTML = '';
         const searchTerm = searchInput.value.toLowerCase();
 
-        const filteredOrders = displayedOrders
+        const filteredOrders = allOrdersFromListener
             .filter(order => order.status === currentStatusFilter)
             .filter(order => currentTypeFilter === 'todos' || order.tipo === currentTypeFilter)
             .filter(order => !priorityFilterActive || order.prioridade)
@@ -394,6 +426,7 @@ function initAppPage() {
                 card.className = `order-item-card status-${order.status}`;
                 card.dataset.id = order.id;
                 const displayId = order.id.toString().slice(-6);
+                const clientName = order.loja === 2 ? `${order.cliente} - Loja 2` : order.cliente;
                 
                 let actionButtonsHTML = '';
                 if (order.status === 'pendente') {
@@ -406,7 +439,7 @@ function initAppPage() {
 
                 card.innerHTML = `
                     ${order.prioridade ? '<i class="fas fa-star priority-icon" title="Pedido Urgente"></i>' : ''}
-                    <h4>${order.cliente}</h4>
+                    <h4>${clientName}</h4>
                     <p>Pedido #${displayId} - ${order.items.length} item(s)</p>
                     <div class="order-card-actions">
                         <button class="btn-secondary btn-small" data-action="view" title="Visualizar Pedido"><i class="fas fa-eye"></i></button>
@@ -421,69 +454,45 @@ function initAppPage() {
     }
 
     function editOrder(orderId) {
-        const orderToEdit = displayedOrders.find(order => order.id === orderId);
-        if(!orderToEdit) return;
+        const orderToEdit = allOrdersFromListener.find(order => order.id === orderId);
+        if (!orderToEdit) return;
 
         resetEntireOrder();
         document.querySelector(`.order-item-card[data-id="${orderId}"]`)?.classList.add('editing');
         editingOrderIdInput.value = orderToEdit.id;
         clienteNameInput.value = orderToEdit.cliente;
         extraItemsInput.value = orderToEdit.extras;
+        enderecoEntregaInput.value = orderToEdit.endereco || '';
         document.querySelector(`input[name="tipo_pedido"][value="${orderToEdit.tipo}"]`).checked = true;
+        
+        if (orderToEdit.tipo === 'Entrega') {
+            addressSection.classList.remove('hidden');
+        } else {
+            addressSection.classList.add('hidden');
+        }
+
         prioridadeCheck.checked = orderToEdit.prioridade || false;
+        loja2Check.checked = orderToEdit.loja === 2;
         currentOrderItems = JSON.parse(JSON.stringify(orderToEdit.items));
         updateOrderSummary();
         savePrintBtn.innerHTML = '<i class="fas fa-edit"></i> Atualizar Pedido';
         newOrderBtn.classList.remove('hidden');
     }
 
-    function deleteAllOrders() {
-        if (!confirm('ATENÇÃO MÁXIMA:\nEsta ação vai APAGAR PERMANENTEMENTE TODOS OS PEDIDOS do banco de dados.\n\nDeseja continuar?')) return;
-        
-        let deletedCount = 0;
-        db.collection('pedidos').get().then(snapshot => {
-            if (snapshot.empty) {
-                alert("Não há nenhum pedido no banco de dados para excluir.");
-                return;
-            }
-            deletedCount = snapshot.size;
-            const batch = db.batch();
-            snapshot.docs.forEach(doc => {
-                batch.delete(doc.ref);
-            });
-            return batch.commit();
-        }).then(() => {
-            if (deletedCount > 0) {
-                alert(`Todos os ${deletedCount} pedidos foram excluídos com sucesso.`);
-            }
-        }).catch(err => {
-            console.error("Erro ao excluir todos os pedidos:", err);
-            alert("ERRO: Não foi possível excluir os pedidos.");
-        });
-    }
-
     function updateOrderCounts() {
-        const total = displayedOrders.length;
+        const total = allOrdersFromListener.length;
         document.getElementById('total-orders-count').textContent = total;
         document.getElementById('count-todos').textContent = total;
-
         const statusCounts = { pendente: 0, 'em preparo': 0, pronto: 0, cancelado: 0 };
         const typeCounts = { 'Na Loja': 0, 'Retirada': 0, 'Entrega': 0 };
-
-        displayedOrders.forEach(order => {
-            if (statusCounts.hasOwnProperty(order.status)) {
-                statusCounts[order.status]++;
-            }
-            if (typeCounts.hasOwnProperty(order.tipo)) {
-                typeCounts[order.tipo]++;
-            }
+        allOrdersFromListener.forEach(order => {
+            if (statusCounts.hasOwnProperty(order.status)) { statusCounts[order.status]++; }
+            if (typeCounts.hasOwnProperty(order.tipo)) { typeCounts[order.tipo]++; }
         });
-
         document.getElementById('count-pendente').textContent = statusCounts.pendente;
         document.getElementById('count-em-preparo').textContent = statusCounts['em preparo'];
         document.getElementById('count-pronto').textContent = statusCounts.pronto;
         document.getElementById('count-cancelado').textContent = statusCounts.cancelado;
-
         document.getElementById('count-na-loja').textContent = typeCounts['Na Loja'];
         document.getElementById('count-retirada').textContent = typeCounts['Retirada'];
         document.getElementById('count-entrega').textContent = typeCounts['Entrega'];
@@ -495,13 +504,13 @@ function initAppPage() {
         startOfDay.setHours(0, 0, 0, 0);
         const q = db.collection('pedidos').where('timestamp', '>=', startOfDay).orderBy('timestamp', 'desc');
         unsubscribeOrders = q.onSnapshot(snapshot => {
-            displayedOrders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            allOrdersFromListener = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             updateOrderCounts();
             renderOrders();
         }, err => {
             console.error("Erro ao ouvir pedidos:", err);
-            if (err.message.includes("requires an index")) {
-                alert("ERRO: É necessário criar um índice no Firebase. Verifique o console.");
+            if (err.code === 'failed-precondition' && err.message.includes("index")) {
+                 alert("ERRO DE BANCO DE DADOS: É necessário criar um índice no Firebase. Verifique o link no console de logs (F12) e crie o índice composto solicitado.");
             }
         });
     }
@@ -514,12 +523,13 @@ function initAppPage() {
                 ${item.sides.length > 0 ? `<ul>${item.sides.map(s => `<li>${s}</li>`).join('')}</ul>` : ''}
             </div>
         `).join('');
-
+        const clientName = order.loja === 2 ? `${order.cliente} - Loja 2` : order.cliente;
         modalOrderDetails.innerHTML = `
-            <p><strong>Cliente:</strong> ${order.cliente}</p>
+            <p><strong>Cliente:</strong> ${clientName}</p>
             <p><strong>Tipo:</strong> ${order.tipo}</p>
             <p><strong>Status:</strong> ${order.status}</p>
             <p><strong>Prioridade:</strong> ${order.prioridade ? 'Sim' : 'Não'}</p>
+            ${order.endereco ? `<p><strong>Endereço:</strong> ${order.endereco}</p>` : ''}
             ${order.extras ? `<p><strong>Extras:</strong> ${order.extras}</p>` : ''}
             ${order.status === 'cancelado' && order.cancelReason ? `<p><strong>Motivo do Cancelamento:</strong> ${order.cancelReason}</p>` : ''}
             <div class="modal-items-list">${itemsHTML}</div>
@@ -527,77 +537,226 @@ function initAppPage() {
         viewOrderModal.classList.remove('hidden');
     }
 
-    function printDailyReport() {
-        const reciboContainer = document.getElementById('recibo-container');
-        if (displayedOrders.length === 0) {
-            alert("Não há pedidos para gerar um relatório.");
+    // =======================================================================================
+    // FUNÇÃO DE GERAR PDF TOTALMENTE REFEITA PARA MAIOR CLAREZA E PROFISSIONALISMO
+    // =======================================================================================
+    function generateReportPdf(title, orders) {
+        const { jsPDF } = window.jspdf;
+        if (orders.length === 0) {
+            alert("Não há pedidos para gerar este relatório.");
             return;
         }
+    
+        const doc = new jsPDF();
+        const pageWidth = doc.internal.pageSize.getWidth();
 
-        const counts = {
-            total: displayedOrders.length,
-            pendente: displayedOrders.filter(o => o.status === 'pendente').length,
-            emPreparo: displayedOrders.filter(o => o.status === 'em preparo').length,
-            pronto: displayedOrders.filter(o => o.status === 'pronto').length,
-            cancelado: displayedOrders.filter(o => o.status === 'cancelado').length,
+        // Helper para formatar os itens de um pedido em uma única string com quebras de linha
+        const formatItems = (items) => {
+            if (!items || items.length === 0) return 'N/A';
+            return items.map(item => {
+                let itemStr = item.dish; // O prato principal
+                if (item.sides && item.sides.length > 0) {
+                    // Adiciona cada acompanhamento em uma nova linha, indentado
+                    const sidesStr = item.sides.map(side => `  - ${side}`).join('\n');
+                    itemStr += `\n${sidesStr}`;
+                }
+                return itemStr;
+            }).join('\n\n'); // Separa múltiplos itens no mesmo pedido com duas quebras de linha
         };
-
-        let reportHTML = `
-            <div class="report-header">
-                <h1>Relatório Geral de Pedidos</h1>
-                <p>Data: ${new Date().toLocaleDateString('pt-BR')}</p>
-            </div>
-            <div class="report-summary">
-                <h2>Resumo do Dia</h2>
-                <p><strong>Total de Pedidos:</strong> ${counts.total}</p>
-                <p><strong>Pendentes:</strong> ${counts.pendente}</p>
-                <p><strong>Em Preparo:</strong> ${counts.emPreparo}</p>
-                <p><strong>Prontos:</strong> ${counts.pronto}</p>
-                <p><strong>Cancelados:</strong> ${counts.cancelado}</p>
-            </div>
-            <div class="report-order-list">
-                <h2>Todos os Pedidos</h2>
-        `;
+    
+        // --- Cabeçalho ---
+        doc.setFontSize(22);
+        doc.setFont(undefined, 'bold');
+        doc.text("Relatório de Performance - Mania Mix", pageWidth / 2, 20, { align: 'center' });
+        doc.setFontSize(12);
+        doc.setFont(undefined, 'normal');
+        doc.text(title, pageWidth / 2, 28, { align: 'center' });
+        doc.setFontSize(10);
+        doc.setTextColor(150);
+        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth / 2, 34, { align: 'center' });
+    
+        // --- Processamento de Dados ---
+        const finishedOrders = orders.filter(o => o.status === 'pronto' || o.status === 'cancelado');
+        const dishCount = {};
+        orders.filter(o => o.status === 'pronto').forEach(order => {
+            order.items.forEach(item => {
+                dishCount[item.dish] = (dishCount[item.dish] || 0) + 1;
+            });
+        });
+        const storeCount = { 'Loja 1': 0, 'Loja 2': 0 };
+        finishedOrders.forEach(order => {
+            if (order.loja === 2) storeCount['Loja 2']++;
+            else storeCount['Loja 1']++;
+        });
+    
+        // --- Tabelas com AutoTable ---
+        const headStyles = { fillColor: [44, 14, 86], textColor: 255, fontStyle: 'bold' };
+        const summaryHeadStyles = { fillColor: [88, 28, 172], fontStyle: 'bold', fontSize: 14 };
         
-        const sortedOrders = [...displayedOrders].sort((a, b) => {
-            const timeA = a.timestamp?.toDate() || 0;
-            const timeB = b.timestamp?.toDate() || 0;
-            return timeA - timeB;
+        // Tabela de Resumo de Pratos
+        const dishData = Object.entries(dishCount)
+            .sort((a, b) => b[1] - a[1])
+            .map(([dish, count]) => [dish, count]);
+        
+        doc.autoTable({
+            startY: 45,
+            head: [['Resumo de Pratos Vendidos (Prontos)']],
+            headStyles: summaryHeadStyles,
+            body: [],
+            theme: 'plain'
+        });
+        doc.autoTable({
+            startY: doc.autoTable.previous.finalY,
+            head: [['Prato', 'Quantidade']],
+            body: dishData.length > 0 ? dishData : [['Nenhum prato finalizado.', '']],
+            headStyles: headStyles,
+            theme: 'striped'
+        });
+    
+        // Tabela de Resumo por Loja
+        const storeData = Object.entries(storeCount).map(([store, count]) => [store, count]);
+        doc.autoTable({
+            startY: doc.autoTable.previous.finalY + 10,
+            head: [['Resumo por Loja (Prontos e Cancelados)']],
+            headStyles: summaryHeadStyles,
+            body: [],
+            theme: 'plain'
+        });
+        doc.autoTable({
+            startY: doc.autoTable.previous.finalY,
+            head: [['Loja', 'Total de Pedidos']],
+            body: storeData,
+            headStyles: headStyles,
+            theme: 'striped'
         });
 
-        sortedOrders.forEach(order => {
-            const orderNumber = order.id.slice(-6);
-            const hora = order.timestamp?.toDate() ? order.timestamp.toDate().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/A';
-            reportHTML += `
-                <div class="report-order-item">
-                    <h4>Pedido #${orderNumber} - ${order.cliente} (${hora})</h4>
-                    <p><strong>Tipo:</strong> ${order.tipo} | <strong>Status:</strong> ${order.status.charAt(0).toUpperCase() + order.status.slice(1)}</p>
-                    <ul>
-                        ${order.items.map(item => `<li>${item.dish} ${item.sides.length > 0 ? `<i>(${item.sides.join(', ')})</i>` : ''}</li>`).join('')}
-                    </ul>
-                    ${order.extras ? `<p><strong>Extras:</strong> ${order.extras}</p>` : ''}
-                    ${order.cancelReason ? `<p><strong>Motivo Cancel.:</strong> ${order.cancelReason}</p>` : ''}
-                </div>
-            `;
+        // Tabela de Pedidos Prontos
+        const readyOrders = orders
+            .filter(o => o.status === 'pronto')
+            .map(o => [
+                `#${o.id.slice(-6)}`, 
+                o.cliente, 
+                o.loja === 2 ? 'Loja 2' : 'Loja 1',
+                formatItems(o.items)
+            ]);
+        
+        doc.autoTable({
+            startY: doc.autoTable.previous.finalY + 10,
+            head: [['Pedidos Finalizados como "Prontos"']],
+            headStyles: { fillColor: [22, 160, 133], fontStyle: 'bold', fontSize: 14 },
+            body: [],
+            theme: 'plain'
+        });
+        doc.autoTable({
+            startY: doc.autoTable.previous.finalY,
+            head: [['Nº Pedido', 'Cliente', 'Loja', 'Itens Pedidos']],
+            body: readyOrders.length > 0 ? readyOrders : [['Nenhum pedido finalizado.', '', '', '']],
+            headStyles: { fillColor: [26, 188, 156] },
+            theme: 'grid',
+            columnStyles: { 3: { cellWidth: 'auto' } }
         });
 
-        reportHTML += `</div>`;
-        
-        reciboContainer.innerHTML = reportHTML;
-        reciboContainer.classList.add('report-mode');
-        window.print();
-        reciboContainer.innerHTML = '';
-        reciboContainer.classList.remove('report-mode');
+        // Tabela de Pedidos Cancelados
+        const cancelledOrders = orders
+            .filter(o => o.status === 'cancelado')
+            .map(o => [
+                `#${o.id.slice(-6)}`, 
+                o.cliente, 
+                formatItems(o.items),
+                o.cancelReason || 'N/A'
+            ]);
+
+        doc.autoTable({
+            startY: doc.autoTable.previous.finalY + 10,
+            head: [['Pedidos "Cancelados"']],
+            headStyles: { fillColor: [192, 57, 43], fontStyle: 'bold', fontSize: 14 },
+            body: [],
+            theme: 'plain'
+        });
+        doc.autoTable({
+            startY: doc.autoTable.previous.finalY,
+            head: [['Nº Pedido', 'Cliente', 'Itens do Pedido', 'Motivo']],
+            body: cancelledOrders.length > 0 ? cancelledOrders : [['Nenhum pedido cancelado.', '', '', '']],
+            headStyles: { fillColor: [231, 76, 60] },
+            theme: 'grid',
+            columnStyles: { 2: { cellWidth: 'auto' } }
+        });
+
+        // --- Rodapé ---
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setTextColor(150);
+            doc.text('Página ' + String(i) + ' de ' + String(pageCount), doc.internal.pageSize.width - 20, 287);
+        }
+    
+        // Salva o arquivo
+        const fileName = `${title.toLowerCase().replace(/[\s/]/g, '_').replace(/[^\w-]/g, '')}.pdf`;
+        doc.save(fileName);
+    }
+    
+    function generateDailyReport() {
+        const title = `Relatório do Dia - ${new Date().toLocaleDateString('pt-BR')}`;
+        generateReportPdf(title, allOrdersFromListener);
+    }
+    
+    async function generateWeeklyReport() {
+        const today = new Date();
+        const dayOfWeek = today.getDay();
+        const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+        const monday = new Date(today.setDate(diff));
+        monday.setHours(0, 0, 0, 0);
+    
+        const sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+        sunday.setHours(23, 59, 59, 999);
+    
+        const title = `Relatório Semanal (${monday.toLocaleDateString('pt-BR')} - ${sunday.toLocaleDateString('pt-BR')})`;
+    
+        try {
+            const snapshot = await db.collection('pedidos')
+                .where('timestamp', '>=', monday)
+                .where('timestamp', '<=', sunday)
+                .get();
+    
+            const weeklyOrders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            generateReportPdf(title, weeklyOrders);
+            
+            if (new Date().getDay() === 0) {
+                 if (confirm('RELATÓRIO SEMANAL GERADO!\n\nHoje é domingo. Deseja APAGAR TODOS os pedidos da semana para iniciar uma nova? ESTA AÇÃO NÃO PODE SER DESFEITA.')) {
+                    const batch = db.batch();
+                    snapshot.docs.forEach(doc => {
+                        batch.delete(doc.ref);
+                    });
+                    await batch.commit();
+                    alert(`${snapshot.size} pedidos da semana foram apagados com sucesso!`);
+                }
+            }
+    
+        } catch (error) {
+            console.error("Erro ao gerar relatório semanal:", error);
+            alert("Erro ao buscar dados para o relatório semanal. Verifique o console.");
+        }
     }
     
     function setupAppEventListeners() {
         logoutBtn.addEventListener('click', () => auth.signOut());
         savePrintBtn.addEventListener('click', saveAndPrintOrder);
+        employeePrintBtn.addEventListener('click', printEmployeeOrder);
         newOrderBtn.addEventListener('click', resetEntireOrder);
-        deleteAllOrdersBtn.addEventListener('click', deleteAllOrders);
-        printReportBtn.addEventListener('click', printDailyReport);
+        generateDailyReportBtn.addEventListener('click', generateDailyReport);
+        generateWeeklyReportBtn.addEventListener('click', generateWeeklyReport);
         searchInput.addEventListener('input', renderOrders);
-        
+        document.querySelectorAll('input[name="tipo_pedido"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                if (e.target.value === 'Entrega') {
+                    addressSection.classList.remove('hidden');
+                } else {
+                    addressSection.classList.add('hidden');
+                }
+            });
+        });
         orderFilters.addEventListener('click', e => {
             const target = e.target.closest('.filter-btn');
             if(!target) return;
@@ -606,7 +765,6 @@ function initAppPage() {
             currentStatusFilter = target.dataset.status;
             renderOrders();
         });
-
         typeFilters.addEventListener('click', e => {
             const target = e.target.closest('.filter-btn');
             if(!target) return;
@@ -615,21 +773,18 @@ function initAppPage() {
             currentTypeFilter = target.dataset.type;
             renderOrders();
         });
-
         priorityToggleBtn.addEventListener('click', () => {
             priorityFilterActive = !priorityFilterActive;
             priorityToggleBtn.classList.toggle('active', priorityFilterActive);
             renderOrders();
         });
-
         ordersList.addEventListener('click', e => {
             const button = e.target.closest('button');
             const card = e.target.closest('.order-item-card');
             if (!card) return;
             const orderId = card.dataset.id;
-            const orderData = displayedOrders.find(o => o.id === orderId);
+            const orderData = allOrdersFromListener.find(o => o.id === orderId);
             if (!orderData) return;
-
             if (button) {
                 const action = button.dataset.action;
                 if (action === 'start') { db.collection('pedidos').doc(orderId).update({ status: 'em preparo' }); }
@@ -645,16 +800,11 @@ function initAppPage() {
                 else if (action === 'edit') {
                     editOrder(orderId);
                     if (window.innerWidth <= 1024) { appContainer.classList.add('view-main'); }
-                } else if (action === 'delete') {
-                    if (confirm(`ATENÇÃO:\nVai APAGAR o pedido de ${orderData?.cliente}.\n\nDeseja continuar?`)) {
-                        db.collection('pedidos').doc(orderId).delete();
-                    }
                 }
             } else {
                 showOrderModal(orderData);
             }
         });
-        
         menuContent.addEventListener('change', e => {
              if (e.target.name === 'main-dish') {
                 document.querySelectorAll('.sides-container').forEach(c => { c.innerHTML = ''; c.classList.add('hidden'); });
@@ -668,19 +818,14 @@ function initAppPage() {
                 }
             }
         });
-
-        // AQUI ESTÁ A CORREÇÃO DO BUG DO ALERTA
         addItemBtn.addEventListener('click', () => {
-            if (isAddingItem) return; // Se já estiver adicionando, ignora o clique
-
+            if (isAddingItem) return;
             const selectedDishRadio = document.querySelector('input[name="main-dish"]:checked');
             if (!selectedDishRadio) {
                 alert('Selecione um prato para adicionar.');
                 return;
             }
-            
-            isAddingItem = true; // Ativa a flag para bloquear cliques rápidos
-
+            isAddingItem = true;
             const groupIndex = selectedDishRadio.dataset.groupIndex;
             currentOrderItems.push({
                 dish: selectedDishRadio.value,
@@ -688,16 +833,12 @@ function initAppPage() {
             });
             clearMenuSelection();
             updateOrderSummary();
-
-            // Libera o botão para um novo clique após 300ms
             setTimeout(() => { isAddingItem = false; }, 300);
         });
-
         orderSummaryItems.addEventListener('click', e => {
             const target = e.target.closest('button');
             if (!target) return;
             const index = parseInt(target.dataset.index);
-
             if (target.classList.contains('delete-item-btn')) { currentOrderItems.splice(index, 1); }
             if (target.classList.contains('dupe-item-btn')) {
                 const itemCopy = JSON.parse(JSON.stringify(currentOrderItems[index]));
@@ -719,7 +860,6 @@ function initAppPage() {
             }
             updateOrderSummary();
         });
-
         mobileFab.addEventListener('click', () => { appContainer.classList.add('view-main'); });
         mobileBackBtn.addEventListener('click', () => { appContainer.classList.remove('view-main'); });
         closeModalBtn.addEventListener('click', () => { viewOrderModal.classList.add('hidden'); });
