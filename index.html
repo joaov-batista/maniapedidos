@@ -35,8 +35,8 @@
             <div class="sidebar-header">
                 <h2><i class="fas fa-tasks"></i> Fila de Pedidos</h2>
                 <div class="header-right-controls">
-                    <button id="printReportBtn" class="btn-secondary btn-small" title="Imprimir relação geral do dia"><i class="fas fa-file-alt"></i> Relatório</button>
-                    <button id="deleteAllOrdersBtn" class="btn-danger btn-small" title="Excluir todos os pedidos do dia"><i class="fas fa-trash"></i> Limpar Dia</button>
+                    <button id="generateDailyReportBtn" class="btn-secondary btn-small" title="Gerar relatório do dia em PDF"><i class="fas fa-file-pdf"></i> Dia</button>
+                    <button id="generateWeeklyReportBtn" class="btn-secondary btn-small" title="Gerar relatório da semana em PDF"><i class="fas fa-file-pdf"></i> Semana</button>
                 </div>
             </div>
             <div class="order-controls">
@@ -94,18 +94,35 @@
                         </div>
                         <div class="order-details-inputs">
                             <input type="text" id="cliente-name" placeholder="Nome do Cliente" required>
+                            
                             <div class="radio-group">
                                 <input type="radio" id="consumo_loja" name="tipo_pedido" value="Na Loja"><label for="consumo_loja">Na Loja</label>
                                 <input type="radio" id="retirada" name="tipo_pedido" value="Retirada" checked><label for="retirada">Retirada</label>
                                 <input type="radio" id="entrega" name="tipo_pedido" value="Entrega"><label for="entrega">Entrega</label>
                             </div>
-                            <div class="checkbox-wrapper">
-                                <input type="checkbox" id="prioridade-check">
-                                <label for="prioridade-check">Pedido Prioritário / Urgente</label>
+
+                            <div id="address-section" class="hidden">
+                                <textarea id="endereco-entrega" placeholder="Digite o endereço de entrega (opcional)"></textarea>
                             </div>
+                            
+                            <div class="checkbox-group">
+                                <div class="checkbox-wrapper">
+                                    <input type="checkbox" id="loja2-check">
+                                    <label for="loja2-check">Pedido Loja 2</label>
+                                </div>
+                                <div class="checkbox-wrapper">
+                                    <input type="checkbox" id="prioridade-check">
+                                    <label for="prioridade-check">Pedido Prioritário</label>
+                                </div>
+                            </div>
+                            
                             <input type="text" id="extra-items" placeholder="Extra">
                             <input type="hidden" id="editing-order-id">
-                            <button id="save-print-btn" class="btn-primary"><i class="fas fa-print"></i> Finalizar e Imprimir</button>
+
+                            <div class="action-buttons-grid">
+                                <button id="employee-print-btn" class="btn-secondary"><i class="fas fa-receipt"></i> Apenas Imprimir (Funcionário)</button>
+                                <button id="save-print-btn" class="btn-primary"><i class="fas fa-save"></i> Salvar e Imprimir</button>
+                            </div>
                             <button id="new-order-btn" class="btn-secondary hidden"><i class="fas fa-undo"></i> Cancelar Edição</button>
                         </div>
                     </div>
@@ -128,9 +145,14 @@
 
     <div id="recibo-container"></div>
     
+    <!-- Scripts -->
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    <!-- Bibliotecas para gerar PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- NOVA BIBLIOTECA ADICIONADA PARA TABELAS PROFISSIONAIS NO PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
