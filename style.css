@@ -196,7 +196,7 @@ body {
 
 /* PÁGINA ADMIN */
 .admin-page-body { overflow-y: auto; }
-.admin-container { max-width: 900px; margin: 3rem auto; padding: 2rem; background: var(--bg-color); border-radius: var(--border-radius); }
+.admin-container { max-width: 900px; margin: 3rem auto; padding: 2rem; background: var(--bg-color); border-radius: var(--border-radius); position: relative; }
 .admin-header { text-align: center; margin-bottom: 2rem; }
 .menu-group-admin-card { background: var(--primary-color); padding: 1.5rem; border-radius: var(--border-radius); margin-bottom: 1.5rem; position: relative; }
 .delete-group-btn { position: absolute; top: 1rem; right: 1rem; padding: 0.5rem; line-height: 1; }
@@ -285,20 +285,45 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 /* ESTILOS DE IMPRESSÃO */
-@media print { 
-    body > *:not(#recibo-container) { display: none !important; } 
-    #recibo-container, #recibo-container * { display: block !important; visibility: visible !important; margin: 0; padding: 0; } 
-    @page { margin: 10mm; } 
-    #recibo-container { width: 72mm; font-family: 'Consolas', 'Courier New', monospace; font-size: 10pt; color: #000; text-align: center; } 
-    #recibo-container .recibo-header h1 { font-size: 14pt; margin: 0 0 5px 0; font-weight: bold; } 
-    #recibo-container .recibo-info { font-size: 9pt; margin: 5px 0; } 
-    #recibo-container .recibo-section h2 { font-size: 11pt; font-weight: bold; padding: 5px 0; margin: 8px 0; } 
-    #recibo-container .recibo-item { margin-bottom: 8px; text-align: center; } 
-    #recibo-container .recibo-item p { margin: 0; font-weight: bold; font-size: 11pt; } 
-    #recibo-container .recibo-item ul { list-style: none; padding: 0; } 
-    #recibo-container .recibo-item li::before { content: "- "; } 
-    #recibo-container hr { border: none; border-top: 1px dashed #000; margin: 8px 0; } 
-} 
+@media print {
+    body.is-printing > *:not(#recibo-container):not(#printable-menu) {
+        display: none !important;
+    }
+    #recibo-container, #recibo-container *, #printable-menu, #printable-menu * {
+        display: block !important;
+        visibility: visible !important;
+        margin: 0;
+        padding: 0;
+        box-shadow: none;
+        border: none;
+    }
+    @page { margin: 10mm; }
+
+    /* Estilos para Recibo */
+    #recibo-container {
+        width: 72mm; font-family: 'Consolas', 'Courier New', monospace; font-size: 10pt; color: #000; text-align: center;
+    }
+    #recibo-container .recibo-header h1 { font-size: 14pt; margin: 0 0 5px 0; font-weight: bold; }
+    #recibo-container .recibo-info { font-size: 9pt; margin: 5px 0; }
+    #recibo-container .recibo-section h2 { font-size: 11pt; font-weight: bold; padding: 5px 0; margin: 8px 0; }
+    #recibo-container .recibo-item { margin-bottom: 8px; text-align: center; }
+    #recibo-container .recibo-item p { margin: 0; font-weight: bold; font-size: 11pt; }
+    #recibo-container .recibo-item ul { list-style: none; padding: 0; }
+    #recibo-container .recibo-item li::before { content: "- "; }
+    #recibo-container hr { border: none; border-top: 1px dashed #000; margin: 8px 0; }
+
+    /* Estilos para Cardápio */
+    #printable-menu {
+        color: #000; font-family: 'Inter', sans-serif;
+    }
+    #printable-menu h1 { font-size: 22pt; text-align: center; }
+    #printable-menu p { text-align: center; font-size: 12pt; margin-bottom: 10px; }
+    #printable-menu .print-group { margin-top: 20px; }
+    #printable-menu h2 { font-size: 16pt; border-bottom: 1px solid #000; padding-bottom: 5px; }
+    #printable-menu h3 { font-size: 13pt; margin-top: 10px; }
+    #printable-menu ul { list-style-position: inside; padding-left: 10px; font-size: 12pt; }
+}
+
 
 /* --- SEÇÃO RESPONSIVA --- */
 @media (max-width: 1024px) { 
