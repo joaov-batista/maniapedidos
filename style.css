@@ -1,5 +1,31 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@media print {
+    
+    html, body {
+        height: auto !important;
+        overflow: visible !important;
+        display: block !important;
+        background: none !important;
+    }
 
+    #login-container, #app-container, #view-order-modal, #mobile-fab {
+        display: none !important;
+        visibility: hidden !important;
+    }
+    
+    body.is-printing > *:not(#recibo-container):not(#printable-menu) {
+        display: none !important;
+    }
+    
+    #recibo-container, #recibo-container *, #printable-menu, #printable-menu * {
+        display: block !important;
+        visibility: visible !important;
+        margin: 0;
+        padding: 0;
+        box-shadow: none;
+        border: none;
+    }
+}
 :root {
     --bg-color: #2c0e56;
     --primary-color: #3e1a72;
@@ -357,3 +383,4 @@ input[type="date"]::-webkit-calendar-picker-indicator {
         text-align: center;
     }
 }
+
